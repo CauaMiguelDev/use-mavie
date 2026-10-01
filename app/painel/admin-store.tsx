@@ -6,9 +6,9 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { Loader2, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
-import type { Catalog } from "../products";
+import { catalog as published, type Catalog } from "../products";
 import { supabase, supabaseReady } from "../supabase";
-import { uid, type AdminState } from "./admin-logic";
+import { appendLog, initialState, uid, type AdminState } from "./admin-logic";
 import { Field, inputCls } from "./ui";
 
 type Ctx = {
@@ -17,8 +17,10 @@ type Ctx = {
   run: (fn: (s: AdminState) => AdminState, ok?: string) => boolean;
   saving: boolean;
   email: string;
+  local: boolean; // true = sem banco: dados só neste navegador
   signOut: () => void;
   uploadImage: (dataUrl: string) => Promise<string>;
+  restore: (s: AdminState) => void;
 };
 const AdminContext = createContext<Ctx | null>(null);
 
@@ -51,15 +53,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     return () => data.subscription.unsubscribe();
   }, []);
 
-  if (!supabaseReady)
-    return (
-      <Center>
-        <div className="box p-6 text-center">
-          <p className="font-display text-3xl">Painel em configuração</p>
-          <p className="mt-2 text-sm text-muted-foreground">O banco de dados da loja ainda não foi conectado.</p>
-        </div>
-      </Center>
-    );
+  if (!supabaseReady) return <LocalLoaded>{children}</LocalLoaded>;
   if (session === undefined) return <Center><Spinner /></Center>;
   if (recovery && session) return <NewPassword onDone={() => setRecovery(false)} />;
   if (!session) return <Login />;
@@ -85,7 +79,7 @@ function Loaded({ session, children }: { session: Session; children: ReactNode }
     if (!admin.data || !store.data) return setDenied(true); // RLS esconde a linha de quem não é admin
     version.current = store.data.version;
     const d = admin.data.data as Omit<AdminState, "catalog">;
-    const next: AdminState = { catalog: store.data.catalog as Catalog, orders: d.orders ?? [], movements: d.movements ?? [], nextOrder: d.nextOrder ?? 1001 };
+    const next: AdminState = { catalog: store.data.catalog as Catalog, orders: d.orders ?? [], movements: d.movements ?? [], nextOrder: d.nextOrder ?? 1001, log: d.log ?? [] };
     stateRef.current = next;
     setState(next);
   }, [db]);
@@ -110,6 +104,7 @@ function Loaded({ session, children }: { session: Session; children: ReactNode }
       let next: AdminState;
       try {
         next = fn(prev);
+        if (ok) next = appendLog(next, ok, session.user.email ?? "");
       } catch (e) {
         toast.error((e as Error).message);
         return false;
@@ -122,7 +117,7 @@ function Loaded({ session, children }: { session: Session; children: ReactNode }
       queue.current = queue.current.then(async () => {
         const { data, error } = await db.rpc("save_state", {
           p_catalog: { ...next.catalog, updatedAt: new Date().toISOString() },
-          p_admin: { orders: next.orders, movements: next.movements, nextOrder: next.nextOrder },
+          p_admin: { orders: next.orders, movements: next.movements, nextOrder: next.nextOrder, log: next.log ?? [] },
           p_version: version.current,
         });
         if (error) {
@@ -166,7 +161,85 @@ function Loaded({ session, children }: { session: Session; children: ReactNode }
     );
   if (!state) return <Center><Spinner /></Center>;
 
-  return <AdminContext.Provider value={{ state, run, saving, email, signOut, uploadImage }}>{children}</AdminContext.Provider>;
+  const restore = (s: AdminState) => run(() => s, "Backup restaurado");
+  return <AdminContext.Provider value={{ state, run, saving, email, local: false, signOut, uploadImage, restore }}>{children}</AdminContext.Provider>;
+}
+
+// ---------- Modo local (enquanto o banco não está conectado) ----------
+// IndexedDB guarda tudo, inclusive fotos; pedimos ao navegador armazenamento persistente
+// para ele não apagar sozinho. Backup + Restaurar levam os dados para o banco depois.
+const IDB_NAME = "mavie-admin";
+const IDB_STORE = "kv";
+function idb<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest) {
+  return new Promise<T>((resolve, reject) => {
+    const open = indexedDB.open(IDB_NAME, 1);
+    open.onupgradeneeded = () => open.result.createObjectStore(IDB_STORE);
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const req = run(open.result.transaction(IDB_STORE, mode).objectStore(IDB_STORE));
+      req.onsuccess = () => resolve(req.result as T);
+      req.onerror = () => reject(req.error);
+    };
+  });
+}
+
+function LocalLoaded({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<AdminState | null>(null);
+  const [failed, setFailed] = useState(false);
+  const stateRef = useRef<AdminState | null>(null);
+
+  useEffect(() => {
+    navigator.storage?.persist?.().catch(() => {});
+    idb<AdminState | undefined>("readonly", (s) => s.get("state"))
+      .then((saved) => {
+        const next = saved ?? initialState(published);
+        stateRef.current = next;
+        setState(next);
+      })
+      .catch(() => {
+        setFailed(true);
+        stateRef.current = initialState(published);
+        setState(stateRef.current);
+      });
+  }, []);
+
+  const run = useCallback((fn: (s: AdminState) => AdminState, ok?: string) => {
+    const prev = stateRef.current;
+    if (!prev) return false;
+    let next: AdminState;
+    try {
+      next = fn(prev);
+      if (ok) next = appendLog(next, ok, "este navegador");
+    } catch (e) {
+      toast.error((e as Error).message);
+      return false;
+    }
+    stateRef.current = next;
+    setState(next);
+    // Grava na hora (sem atraso), para não perder nada se a aba fechar.
+    idb("readwrite", (s) => s.put(next, "state")).then(
+      () => ok && toast.success(ok),
+      () => toast.error("Não consegui salvar neste navegador. Faça um backup agora."),
+    );
+    return true;
+  }, []);
+
+  if (!state) return <Center><Spinner /></Center>;
+  const value: Ctx = {
+    state, run, saving: false, email: "Modo local", local: true, signOut: () => {},
+    uploadImage: async (dataUrl) => dataUrl, // a foto fica junto dos dados
+    restore: (s) => run(() => s, "Backup restaurado"),
+  };
+  return (
+    <AdminContext.Provider value={value}>
+      {failed && (
+        <p className="bg-[#fde2e2] px-4 py-2 text-center text-sm text-[#a1262b]">
+          Este navegador bloqueou o armazenamento (janela anônima?). Nada será salvo: abra o painel numa janela normal.
+        </p>
+      )}
+      {children}
+    </AdminContext.Provider>
+  );
 }
 
 function Login() {
@@ -235,6 +308,14 @@ function NewPassword({ onDone }: { onDone: () => void }) {
       </form>
     </Center>
   );
+}
+
+export async function readBackup(file: File): Promise<AdminState> {
+  const data = JSON.parse(await file.text());
+  const s = data?.state as AdminState | undefined;
+  if (data?.type !== "mavie-backup" || !s?.catalog?.products || !Array.isArray(s.orders) || !Array.isArray(s.movements))
+    throw new Error("Este arquivo não é um backup do painel.");
+  return s;
 }
 
 export function exportBackup(s: AdminState) {

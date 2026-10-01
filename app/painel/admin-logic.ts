@@ -34,7 +34,14 @@ export type Movement = {
   reason: (typeof MOVE_REASONS)[number];
   ref?: string;
 };
-export type AdminState = { catalog: Catalog; orders: Order[]; movements: Movement[]; nextOrder: number };
+export type LogEntry = { at: string; text: string; by: string };
+export type AdminState = { catalog: Catalog; orders: Order[]; movements: Movement[]; nextOrder: number; log?: LogEntry[] };
+
+// Histórico permanente de tudo que foi salvo (mais recentes primeiro).
+export const appendLog = (s: AdminState, text: string, by: string): AdminState => ({
+  ...s,
+  log: [{ at: new Date().toISOString(), text, by }, ...(s.log ?? [])].slice(0, 2000),
+});
 
 export const uid = () => crypto.randomUUID().slice(0, 8);
 const now = () => new Date().toISOString();

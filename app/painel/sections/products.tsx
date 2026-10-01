@@ -80,7 +80,7 @@ export default function Products() {
                     <label className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Switch
                         checked={!p.hidden}
-                        onCheckedChange={() => run((s) => toggleHidden(s, p.id), p.hidden ? "Produto visível na loja" : "Produto oculto da loja")}
+                        onCheckedChange={() => run((s) => toggleHidden(s, p.id), p.hidden ? `"${p.name}" visível na loja` : `"${p.name}" oculto da loja`)}
                         aria-label={`Mostrar ${p.name} na loja`}
                         className="data-[state=checked]:bg-rose"
                       />
@@ -91,7 +91,7 @@ export default function Products() {
                         <Pencil className="size-4" strokeWidth={1.5} />
                       </button>
                       <button
-                        onClick={() => confirm(`Excluir "${p.name}"? Esta ação não pode ser desfeita.`) && run((s) => deleteProduct(s, p.id), "Produto excluído")}
+                        onClick={() => confirm(`Excluir "${p.name}"? Esta ação não pode ser desfeita.`) && run((s) => deleteProduct(s, p.id), `Produto "${p.name}" excluído`)}
                         aria-label={`Excluir ${p.name}`}
                         className="btn btn-fill grid size-9 place-items-center rounded-full"
                       >
@@ -142,7 +142,7 @@ function ProductForm({ product, onClose }: { product: Product; onClose: () => vo
     try {
       // Foto nova sobe para o Supabase Storage; foto existente mantém o endereço original.
       const image = /^data:/.test(form.image) ? await uploadImage(form.image) : product.image;
-      if (run((s) => saveProduct(s, { ...form, image }), isNew ? "Produto cadastrado" : "Produto atualizado")) onClose();
+      if (run((s) => saveProduct(s, { ...form, image }), isNew ? `Produto "${form.name.trim()}" cadastrado` : `Produto "${form.name.trim()}" atualizado`)) onClose();
     } catch (err) {
       toast.error((err as Error).message);
     } finally {

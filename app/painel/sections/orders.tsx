@@ -129,7 +129,7 @@ function OrderForm({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     setTried(true);
     if (Object.values(errors).some(Boolean)) return;
-    if (run((s) => createOrder(s, { ...d, phone: d.phone.replace(/\D/g, "") }), "Pedido registrado e estoque atualizado")) onClose();
+    if (run((s) => createOrder(s, { ...d, phone: d.phone.replace(/\D/g, "") }), `Pedido #${state.nextOrder} de ${d.customer.trim()} registrado (${brl(orderTotal(d))}); estoque atualizado`)) onClose();
   }
 
   return (

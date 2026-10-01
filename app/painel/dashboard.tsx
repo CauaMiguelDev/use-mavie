@@ -1,14 +1,14 @@
 "use client";
 
 // Painel da loja: menu lateral com seções. Dados no Supabase (admin-store), ligados à loja ao vivo.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
-  Boxes, Check, ClipboardList, DatabaseBackup, LayoutDashboard, Loader2, LogOut, Shirt, Store, Tags, TrendingUp, Wallet, type LucideIcon,
+  AlertTriangle, Boxes, Check, ClipboardList, DatabaseBackup, FileUp, LayoutDashboard, Loader2, LogOut, ScrollText, Shirt, Store, Tags, TrendingUp, Wallet, type LucideIcon,
 } from "lucide-react";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import { BASE } from "../products";
-import { AdminProvider, exportBackup, useAdmin } from "./admin-store";
+import { AdminProvider, exportBackup, readBackup, useAdmin } from "./admin-store";
 import { ease } from "./ui";
 import Overview from "./sections/overview";
 import Products from "./sections/products";
@@ -17,6 +17,7 @@ import Stock from "./sections/stock";
 import Orders from "./sections/orders";
 import Payments from "./sections/payments";
 import Sales from "./sections/sales";
+import History from "./sections/history";
 
 const NAV: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "inicio", label: "Visão geral", icon: LayoutDashboard },
@@ -26,6 +27,7 @@ const NAV: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "produtos", label: "Produtos", icon: Shirt },
   { id: "estoque", label: "Estoque", icon: Boxes },
   { id: "categorias", label: "Categorias", icon: Tags },
+  { id: "historico", label: "Histórico", icon: ScrollText },
 ];
 
 export default function Dashboard() {
@@ -64,6 +66,7 @@ function Shell() {
     produtos: <Products />,
     estoque: <Stock />,
     categorias: <Categories />,
+    historico: <History />,
   };
 
   return (
@@ -137,25 +140,50 @@ function NavItem({ item, active, onClick, layoutId, compact }: { item: (typeof N
   );
 }
 
-// Conta conectada, status de salvamento e backup.
+// Conta conectada (ou modo local), status de salvamento, backup e restauração.
 function AccountBox({ inline }: { inline?: boolean }) {
-  const { state, saving, email, signOut } = useAdmin();
+  const { state, saving, email, local, signOut, restore } = useAdmin();
+  const file = useRef<HTMLInputElement>(null);
+
+  async function load(f?: File) {
+    if (!f) return;
+    try {
+      const s = await readBackup(f);
+      if (confirm("Substituir os dados do painel por este backup?")) restore(s);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
   return (
-    <div className={`rounded-3xl ${inline ? "box mb-6 flex flex-wrap items-center gap-3 p-3" : "bg-background/60 p-3"}`}>
-      <div className={`min-w-0 ${inline ? "flex-1" : ""}`}>
-        <p className="truncate text-xs text-muted-foreground">{email}</p>
-        <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium" aria-live="polite">
-          {saving ? <><Loader2 className="size-3.5 animate-spin text-rose" /> Salvando…</> : <><Check className="size-3.5 text-[#1d6b3c]" /> Tudo salvo e na loja</>}
+    <div className={`rounded-3xl ${inline ? "box mb-6 p-3" : "bg-background/60 p-3"}`}>
+      {local ? (
+        <p className="flex gap-2 text-xs text-[#8a5200]">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          Modo local: tudo fica salvo neste navegador. Faça backup com frequência.
         </p>
-      </div>
-      <div className={`grid grid-cols-2 gap-2 ${inline ? "" : "mt-3"}`}>
-        <button onClick={() => exportBackup(state)} className="btn btn-fill flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-xs">
+      ) : (
+        <div className="min-w-0">
+          <p className="truncate text-xs text-muted-foreground">{email}</p>
+          <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium" aria-live="polite">
+            {saving ? <><Loader2 className="size-3.5 animate-spin text-rose" /> Salvando…</> : <><Check className="size-3.5 text-[#1d6b3c]" /> Tudo salvo e na loja</>}
+          </p>
+        </div>
+      )}
+      <div className={`mt-3 grid gap-2 ${local ? "grid-cols-2" : "grid-cols-3"}`}>
+        <button onClick={() => exportBackup(state)} className="btn btn-fill flex h-9 items-center justify-center gap-1.5 rounded-full px-2 text-xs">
           <DatabaseBackup className="size-3.5" strokeWidth={1.5} /> Backup
         </button>
-        <button onClick={signOut} className="btn btn-fill flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-xs">
-          <LogOut className="size-3.5" strokeWidth={1.5} /> Sair
+        <button onClick={() => file.current?.click()} className="btn btn-fill flex h-9 items-center justify-center gap-1.5 rounded-full px-2 text-xs">
+          <FileUp className="size-3.5" strokeWidth={1.5} /> Restaurar
         </button>
+        {!local && (
+          <button onClick={signOut} className="btn btn-fill flex h-9 items-center justify-center gap-1.5 rounded-full px-2 text-xs">
+            <LogOut className="size-3.5" strokeWidth={1.5} /> Sair
+          </button>
+        )}
       </div>
+      <input ref={file} type="file" accept="application/json" className="hidden" onChange={(e) => { load(e.target.files?.[0]); e.target.value = ""; }} />
     </div>
   );
 }

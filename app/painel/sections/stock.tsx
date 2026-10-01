@@ -66,9 +66,9 @@ export default function Stock() {
                       const n = p.stock[s];
                       return (
                         <div key={s} className={`flex items-center rounded-full border ${n === 0 ? "border-[#f3a5a8]/60" : n <= 1 ? "border-[#f5c26b]/70" : "border-border"}`}>
-                          <button onClick={() => run((st) => adjustStock(st, p.id, s, -1, "Ajuste"))} disabled={n === 0} aria-label={`Tirar 1 de ${p.name} ${s}`} className="btn grid size-8 place-items-center rounded-full"><Minus className="size-3.5" /></button>
+                          <button onClick={() => run((st) => adjustStock(st, p.id, s, -1, "Ajuste"), `Estoque: -1 ${p.name} (${s})`)} disabled={n === 0} aria-label={`Tirar 1 de ${p.name} ${s}`} className="btn grid size-8 place-items-center rounded-full"><Minus className="size-3.5" /></button>
                           <span className="min-w-12 text-center text-xs tabular-nums"><span className="text-muted-foreground">{s}</span> <strong className="font-semibold">{n}</strong></span>
-                          <button onClick={() => run((st) => adjustStock(st, p.id, s, 1, "Entrada"))} aria-label={`Adicionar 1 de ${p.name} ${s}`} className="btn grid size-8 place-items-center rounded-full"><Plus className="size-3.5" /></button>
+                          <button onClick={() => run((st) => adjustStock(st, p.id, s, 1, "Entrada"), `Estoque: +1 ${p.name} (${s})`)} aria-label={`Adicionar 1 de ${p.name} ${s}`} className="btn grid size-8 place-items-center rounded-full"><Plus className="size-3.5" /></button>
                         </div>
                       );
                     })}
