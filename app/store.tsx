@@ -4,13 +4,13 @@
 // Cor: família rosa mesclada (plum → rose → blush/peach) via --grad; um acento só.
 import { useEffect, useRef, useState } from "react";
 import Lenis from "lenis";
-import { AnimatePresence, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
+import { AnimatePresence, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue } from "motion/react";
 import { ArrowRight, ArrowUp, Camera, Check, LockKeyhole, Menu, Minus, Plus, ShoppingBag, Truck, MessageCircle, Shirt, X, Ban, Tag, Package, Link2, MapPin, Sparkle } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { BASE, WHATSAPP, catalog, colorsOf, focusPos, img, brl, formatPhone, imageSrc, orderMessage, sizesOf, totalStock, whatsappUrl, INSTAGRAM, type BagItem, type Product } from "./products";
 import { useLiveCatalog } from "./supabase";
 import { ProductView } from "./product-view";
-import { Parallax, RevealText, ScrollFillText, ScrollProgress, ScrollSlide, SilkBackground, Sparkles, VelocityMarquee } from "./fx";
+import { Parallax, RevealText, ScrollProgress, ScrollSlide, SilkBackground, Sparkles, VelocityMarquee } from "./fx";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 // Enquadramento das fotos fixas (hero, looks): usa o ponto do rosto do catálogo.
@@ -98,7 +98,6 @@ export default function Store() {
         <Hero />
         <Marquee />
         <Catalog items={visible} categories={cat.categories} onAdd={add} onOpen={openProduct} />
-        <Manifesto />
         <Lookbook />
         <About />
         <Exchanges />
@@ -528,9 +527,6 @@ function Catalog({ items, categories: allCategories, onAdd, onOpen }: { items: P
                       className={`h-full w-full object-cover ${soldOut ? "opacity-50 grayscale" : ""}`}
                     />
                     <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/5" />
-                    <span className="glass pointer-events-none absolute inset-x-3 bottom-3 translate-y-2 rounded-full py-2 text-center text-xs font-medium opacity-0 transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:translate-y-0 group-hover:opacity-100">
-                      Ver detalhes{(p.gallery?.length ?? 0) > 0 ? ` e ${p.gallery!.length + 1} fotos` : ""}
-                    </span>
                   </div>
                   </button>
                   </motion.div>
@@ -592,18 +588,6 @@ function Catalog({ items, categories: allCategories, onAdd, onOpen }: { items: P
   );
 }
 
-// ---------- Manifesto: o texto acende palavra por palavra conforme a rolagem ----------
-function Manifesto() {
-  return (
-    <section className="mx-auto max-w-6xl px-6 py-28 md:px-8 md:py-44" aria-label="Sobre a USE MAVIÊ">
-      <ScrollFillText
-        className="font-display text-[2.1rem] font-medium leading-[1.18] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl"
-        text="Cada peça é escolhida para você ser *notada.* Do primeiro look da noite ao último detalhe, a Maviê caminha com o seu estilo, com atendimento de perto e entrega em *Brasília.*"
-      />
-    </section>
-  );
-}
-
 // ---------- Looks: três colunas em velocidades diferentes (parallax nas caixas, fotos paradas) ----------
 const lookColumns = [
   { speed: 24, ids: ["longo-azul", "body-renda-branco"] },
@@ -647,7 +631,6 @@ function Lookbook() {
 
 // ---------- A loja ----------
 function About() {
-  const reduce = useReducedMotion();
   const steps = [
     { icon: Shirt, t: "Escolha peças e tamanhos", d: "Monte sua sacola direto no catálogo." },
     { icon: MessageCircle, t: "Envie pelo WhatsApp", d: "A sacola vira uma mensagem pronta com o seu pedido." },
@@ -667,28 +650,51 @@ function About() {
       <div>
         <RevealText text="Loja on-line," accent="atendimento de perto." className="font-display text-5xl font-medium leading-[1.1] tracking-tight md:text-6xl" />
         <p className="mt-5 max-w-[55ch] text-muted-foreground">Você escolhe pelo site e fala com gente de verdade: cada pedido é confirmado pela nossa equipe, do tamanho à entrega.</p>
-        <ol className="mt-10 space-y-3">
-          {steps.map(({ icon: Icon, t, d }, i) => (
-            <motion.li
-              key={t}
-              initial={reduce ? false : { opacity: 0, x: 24 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, amount: 0.5 }}
-              transition={{ duration: 0.8, delay: i * 0.08, ease }}
-              className="box box-hover flex items-center gap-4 p-4"
-            >
-              <span className="bg-grad grid size-12 shrink-0 place-items-center rounded-2xl text-white">
-                <Icon className="size-5" strokeWidth={1.5} />
-              </span>
-              <div>
-                <h3 className="font-medium">{t}</h3>
-                <p className="text-sm text-muted-foreground">{d}</p>
-              </div>
-            </motion.li>
-          ))}
-        </ol>
+        <ScrollSteps steps={steps} />
       </div>
     </section>
+  );
+}
+
+// Passos que acendem em sequência conforme a rolagem: a caixa sai do apagado, desliza para o lugar
+// e o ícone ganha o degradê; a linha lateral enche junto com o avanço.
+type Step = { icon: typeof Shirt; t: string; d: string };
+function ScrollSteps({ steps }: { steps: Step[] }) {
+  const ref = useRef<HTMLOListElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 0.85", "end 0.55"] });
+  const line = useSpring(scrollYProgress, { stiffness: 120, damping: 30 });
+  return (
+    <ol ref={ref} className="relative mt-10 space-y-3 pl-6">
+      <span aria-hidden className="absolute bottom-6 left-0 top-6 w-0.5 rounded-full bg-border" />
+      <motion.span aria-hidden style={{ scaleY: line }} className="bg-grad absolute bottom-6 left-0 top-6 w-0.5 origin-top rounded-full" />
+      {steps.map((step, i) => (
+        <StepBox key={step.t} step={step} progress={scrollYProgress} range={[i / steps.length, (i + 1) / steps.length]} />
+      ))}
+    </ol>
+  );
+}
+
+function StepBox({ step: { icon: Icon, t, d }, progress, range }: { step: Step; progress: MotionValue<number>; range: [number, number] }) {
+  const reduce = useReducedMotion();
+  const [from, to] = range;
+  const mid = from + (to - from) * 0.6;
+  const opacity = useTransform(progress, [from, mid], reduce ? [1, 1] : [0.25, 1]);
+  const x = useTransform(progress, [from, mid], reduce ? [0, 0] : [36, 0]);
+  const scale = useTransform(progress, [from, mid], reduce ? [1, 1] : [0.96, 1]);
+  const lit = useTransform(progress, [from, mid], reduce ? [1, 1] : [0, 1]);
+  const unlit = useTransform(lit, [0, 1], [1, 0]);
+  return (
+    <motion.li style={{ opacity, x, scale }} className="box flex items-center gap-4 p-4">
+      <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-2xl bg-muted text-muted-foreground">
+        <motion.span style={{ opacity: lit }} className="bg-grad absolute inset-0" />
+        <motion.span style={{ opacity: lit }} className="relative text-white"><Icon className="size-5" strokeWidth={1.5} /></motion.span>
+        <motion.span style={{ opacity: unlit }} className="absolute"><Icon className="size-5" strokeWidth={1.5} /></motion.span>
+      </span>
+      <div>
+        <h3 className="font-medium">{t}</h3>
+        <p className="text-sm text-muted-foreground">{d}</p>
+      </div>
+    </motion.li>
   );
 }
 

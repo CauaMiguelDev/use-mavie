@@ -317,9 +317,6 @@ function Related({ items, list, onOpen }: { items: Product[]; list: Product[]; o
                   style={{ objectPosition: focusPos(r) }}
                   className={`size-full object-cover ${out ? "opacity-60 grayscale" : ""}`}
                 />
-                <span className="glass absolute inset-x-2 bottom-2 translate-y-2 rounded-full py-1.5 text-center text-xs font-medium opacity-0 transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:translate-y-0 group-hover:opacity-100">
-                  Ver peça
-                </span>
               </div>
               <p className="mt-3 line-clamp-1 text-sm font-medium">{r.name}</p>
               <div className="mt-1 flex items-center justify-between gap-2">
