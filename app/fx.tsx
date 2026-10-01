@@ -18,14 +18,15 @@ export function RevealText({ text, className = "", accent, as = "h2" }: { text: 
   const Tag = as === "h1" ? motion.h1 : motion.h2;
   const parts = [...text.split(" ").map((w) => ({ w, a: false })), ...(accent ? accent.split(" ").map((w) => ({ w, a: true })) : [])];
   return (
-    <Tag className={className} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.6 }} transition={{ staggerChildren: 0.06 }}>
+    <Tag className={className} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.4 }} transition={{ staggerChildren: 0.07 }}>
       {parts.map(({ w, a }, i) => (
         <span key={i} className="inline-block overflow-hidden pb-[0.14em] align-bottom">
           <motion.span
-            className={`inline-block pr-[0.22em] ${a ? "text-grad italic" : ""}`}
+            className={`inline-block origin-bottom-left pr-[0.22em] ${a ? "text-grad italic" : ""}`}
             variants={{
-              hidden: reduce ? { opacity: 0 } : { y: "105%", opacity: 0, filter: "blur(6px)" },
-              show: { y: 0, opacity: 1, filter: "blur(0px)", transition: { duration: 1, ease } },
+              // sobe girando levemente e entra em foco, palavra por palavra
+              hidden: reduce ? { opacity: 0 } : { y: "105%", rotate: 7, opacity: 0, filter: "blur(8px)" },
+              show: { y: 0, rotate: 0, opacity: 1, filter: "blur(0px)", transition: { duration: 1.1, ease } },
             }}
           >
             {w}
@@ -33,6 +34,51 @@ export function RevealText({ text, className = "", accent, as = "h2" }: { text: 
         </span>
       ))}
     </Tag>
+  );
+}
+
+// Texto que se "escreve" com a rolagem: cada palavra acende do cinza para a cor cheia.
+// Palavras entre *asteriscos* ganham o degradê da marca.
+export function ScrollFillText({ text, className = "" }: { text: string; className?: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const reduce = useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 0.85", "end 0.45"] });
+  const words = text.split(" ");
+  return (
+    <p ref={ref} className={className}>
+      {words.map((raw, i) => {
+        const accent = /^\*.*\*[.,!?]?$/.test(raw);
+        const w = raw.replace(/\*/g, "");
+        return (
+          <Word key={i} progress={scrollYProgress} range={[i / words.length, (i + 1) / words.length]} reduce={!!reduce} accent={accent}>
+            {w}
+          </Word>
+        );
+      })}
+    </p>
+  );
+}
+
+function Word({ children, progress, range, reduce, accent }: { children: ReactNode; progress: MotionValue<number>; range: [number, number]; reduce: boolean; accent: boolean }) {
+  const opacity = useTransform(progress, range, reduce ? [1, 1] : [0.14, 1]);
+  const y = useTransform(progress, range, reduce ? [0, 0] : [6, 0]);
+  return (
+    <motion.span style={{ opacity, y }} className={`mr-[0.24em] inline-block ${accent ? "text-grad italic" : ""}`}>
+      {children}
+    </motion.span>
+  );
+}
+
+// Faixa de texto gigante que desliza na horizontal conforme a rolagem.
+export function ScrollSlide({ children, distance = 18, className = "" }: { children: ReactNode; distance?: number; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const x = useTransform(scrollYProgress, [0, 1], reduce ? ["0%", "0%"] : [`${distance}%`, `-${distance}%`]);
+  return (
+    <div ref={ref} className={`overflow-hidden ${className}`}>
+      <motion.div style={{ x }}>{children}</motion.div>
+    </div>
   );
 }
 

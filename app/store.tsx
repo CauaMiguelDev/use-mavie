@@ -7,10 +7,10 @@ import Lenis from "lenis";
 import { AnimatePresence, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
 import { ArrowRight, ArrowUp, Camera, Check, LockKeyhole, Menu, Minus, Plus, ShoppingBag, Truck, MessageCircle, Shirt, X, Ban, Tag, Package, Link2, MapPin, Sparkle } from "lucide-react";
 import { Toaster, toast } from "sonner";
-import { BASE, WHATSAPP, catalog, focusPos, img, brl, formatPhone, imageSrc, orderMessage, sizesOf, totalStock, whatsappUrl, INSTAGRAM, type BagItem, type Product } from "./products";
+import { BASE, WHATSAPP, catalog, colorsOf, focusPos, img, brl, formatPhone, imageSrc, orderMessage, sizesOf, totalStock, whatsappUrl, INSTAGRAM, type BagItem, type Product } from "./products";
 import { useLiveCatalog } from "./supabase";
 import { ProductView } from "./product-view";
-import { Parallax, RevealText, ScrollProgress, SilkBackground, Sparkles, VelocityMarquee } from "./fx";
+import { Parallax, RevealText, ScrollFillText, ScrollProgress, ScrollSlide, SilkBackground, Sparkles, VelocityMarquee } from "./fx";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 // Enquadramento das fotos fixas (hero, looks): usa o ponto do rosto do catálogo.
@@ -98,6 +98,7 @@ export default function Store() {
         <Hero />
         <Marquee />
         <Catalog items={visible} categories={cat.categories} onAdd={add} onOpen={openProduct} />
+        <Manifesto />
         <Lookbook />
         <About />
         <Exchanges />
@@ -539,9 +540,18 @@ function Catalog({ items, categories: allCategories, onAdd, onOpen }: { items: P
                     </h3>
                     <span className="shrink-0 text-sm font-medium">{brl(p.price)}</span>
                   </div>
-                  <p className={`mt-0.5 text-xs ${soldOut || stock <= 2 ? "text-rose" : "text-muted-foreground"}`}>
-                    {soldOut ? "Esgotado" : stock <= 2 ? `Últimas ${stock === 1 ? "unidade" : "unidades"}` : p.category}
-                  </p>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <p className={`text-xs ${soldOut || stock <= 2 ? "font-medium text-rose" : "text-muted-foreground"}`}>
+                      {soldOut ? "Esgotado" : stock <= 2 ? `Últimas ${stock === 1 ? "unidade" : "unidades"}` : p.category}
+                    </p>
+                    {colorsOf(p, items).length > 1 && (
+                      <span className="flex items-center gap-1" aria-label={`${colorsOf(p, items).length} cores`}>
+                        {colorsOf(p, items).map((c) => (
+                          <span key={c.id} title={c.color} className={`size-3 rounded-full ring-1 ring-black/10 ${c.id === p.id ? "ring-2 ring-rose ring-offset-1 ring-offset-background" : ""}`} style={{ background: c.colorHex ?? "#ccc" }} />
+                        ))}
+                      </span>
+                    )}
+                  </div>
                   {!soldOut && (
                     <div className="mt-3 flex gap-1.5" role="group" aria-label={`Tamanhos de ${p.name}`}>
                       {sizesOf(p).map((s) => {
@@ -578,6 +588,18 @@ function Catalog({ items, categories: allCategories, onAdd, onOpen }: { items: P
           </AnimatePresence>
         </motion.div>
       )}
+    </section>
+  );
+}
+
+// ---------- Manifesto: o texto acende palavra por palavra conforme a rolagem ----------
+function Manifesto() {
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-28 md:px-8 md:py-44" aria-label="Sobre a USE MAVIÊ">
+      <ScrollFillText
+        className="font-display text-[2.1rem] font-medium leading-[1.18] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl"
+        text="Cada peça é escolhida para você ser *notada.* Do primeiro look da noite ao último detalhe, a Maviê caminha com o seu estilo, com atendimento de perto e entrega em *Brasília.*"
+      />
     </section>
   );
 }
@@ -754,16 +776,11 @@ function Footer({ whatsapp }: { whatsapp: string }) {
           </div>
         </div>
 
-        <motion.p
-          aria-hidden
-          initial={reduce ? false : { y: "40%", opacity: 0 }}
-          whileInView={{ y: "0%", opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1.4, ease }}
-          className="text-grad relative mt-10 select-none whitespace-nowrap text-center font-display text-[17vw] font-semibold leading-[1] tracking-tight pt-[0.1em] -mb-[0.12em]"
-        >
-          USEMAVIÊ
-        </motion.p>
+        <ScrollSlide distance={12} className="relative mt-10">
+          <p aria-hidden className="text-grad select-none whitespace-nowrap text-center font-display text-[17vw] font-semibold leading-[1] tracking-tight pt-[0.1em] -mb-[0.12em]">
+            USEMAVIÊ
+          </p>
+        </ScrollSlide>
 
         <div className="relative flex flex-col items-center justify-between gap-3 border-t border-foreground/10 px-6 py-5 text-xs text-muted-foreground md:flex-row md:px-12">
           <p>© 2026 USE MAVIÊ. Versão demonstrativa: preços e estoque sujeitos a confirmação.</p>
