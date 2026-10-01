@@ -1,6 +1,6 @@
 // Catálogo editável. Preços e estoque são EXEMPLOS: confira antes de publicar.
-// WhatsApp: preencha com DDI+DDD+número (ex. "5561999999999"). Vazio = WhatsApp pede o contato.
-export const WHATSAPP = "";
+// WhatsApp padrão (DDI+DDD+número). O painel pode trocar e publicar outro.
+export const WHATSAPP = "5561985489219";
 export const INSTAGRAM = "https://instagram.com/usemaviie_";
 // Prefixo do site quando publicado em subpasta (GitHub Pages: /use-mavie).
 export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -63,6 +63,12 @@ export function orderMessage(items: BagItem[], list: Product[] = products) {
   });
   return `Oi, Maviê! Quero fazer este pedido:\n${lines.join("\n")}\nTotal: ${brl(total)}`;
 }
+
+// "5561985489219" -> "(61) 98548-9219"
+export const formatPhone = (n: string) => {
+  const d = n.replace(/\D/g, "").replace(/^55/, "");
+  return d.length === 11 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}` : n;
+};
 
 export const whatsappUrl = (text: string, number = WHATSAPP) =>
   `https://wa.me/${number.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;

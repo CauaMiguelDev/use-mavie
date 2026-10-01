@@ -7,7 +7,7 @@ import Lenis from "lenis";
 import { AnimatePresence, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
 import { ArrowRight, ArrowUp, Camera, Check, Menu, Minus, Plus, ShoppingBag, Truck, MessageCircle, Shirt, X, Ban, Tag, Package, Link2, MapPin, Sparkle } from "lucide-react";
 import { Toaster, toast } from "sonner";
-import { BASE, img, categories, brl, orderMessage, whatsappUrl, INSTAGRAM, type BagItem, type Category } from "./products";
+import { BASE, img, categories, brl, formatPhone, orderMessage, whatsappUrl, INSTAGRAM, type BagItem, type Category } from "./products";
 import { useCatalog, useSettings, type CatalogItem } from "./use-catalog";
 import { Magnetic, RevealText, ScrollProgress, SilkBackground, Sparkles, Tilt } from "./fx";
 
@@ -81,7 +81,8 @@ export default function Store() {
         <About />
         <Exchanges />
       </main>
-      <Footer />
+      <Footer whatsapp={settings.whatsapp} />
+      <WhatsAppFab number={settings.whatsapp} hidden={open} />
       <Bag open={open} items={bagItems} list={list} whatsapp={settings.whatsapp} onClose={() => setOpen(false)} onChange={change} />
       <Toaster position="bottom-center" toastOptions={{ className: "glass", style: { borderRadius: 999, fontFamily: "var(--font-sans)" } }} />
     </div>
@@ -665,7 +666,7 @@ function Exchanges() {
 }
 
 // ---------- Rodapé ----------
-function Footer() {
+function Footer({ whatsapp }: { whatsapp: string }) {
   const reduce = useReducedMotion();
   return (
     <footer className="px-3 pb-3 md:px-4 md:pb-4">
@@ -695,7 +696,11 @@ function Footer() {
               <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2"><MapPin className="size-4" strokeWidth={1.5} /> Loja on-line em Brasília</li>
                 <li className="flex items-center gap-2"><Truck className="size-4" strokeWidth={1.5} /> Entregas na cidade</li>
-                <li className="flex items-center gap-2"><MessageCircle className="size-4" strokeWidth={1.5} /> Pedidos pelo WhatsApp</li>
+                <li>
+                  <a href={whatsappUrl("Oi, Maviê! Vim pelo site.", whatsapp)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 transition-colors duration-300 hover:text-rose">
+                    <MessageCircle className="size-4" strokeWidth={1.5} /> {whatsapp ? formatPhone(whatsapp) : "Pedidos pelo WhatsApp"}
+                  </a>
+                </li>
               </ul>
             </div>
             <div>
@@ -834,6 +839,38 @@ function Bag({ open, items, list, whatsapp, onClose, onChange }: {
             )}
           </motion.aside>
         </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// Botão flutuante de atendimento; some enquanto a sacola está aberta.
+function WhatsAppFab({ number, hidden }: { number: string; hidden: boolean }) {
+  const reduce = useReducedMotion();
+  if (!number) return null;
+  return (
+    <AnimatePresence>
+      {!hidden && (
+        <motion.div
+          initial={reduce ? false : { opacity: 0, y: 24, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 16, scale: 0.95, transition: { duration: 0.2 } }}
+          transition={{ duration: 0.6, delay: 1.4, ease }}
+          className="fixed bottom-5 right-5 z-40 md:bottom-7 md:right-7"
+        >
+          <Magnetic>
+            <a
+              href={whatsappUrl("Oi, Maviê! Vim pelo site e quero tirar uma dúvida.", number)}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Conversar no WhatsApp ${formatPhone(number)}`}
+              className="btn btn-primary btn-shine group flex h-14 items-center gap-2 rounded-full pl-4 pr-5 text-sm font-medium"
+            >
+              <MessageCircle className="size-5" strokeWidth={1.5} />
+              <span className="hidden sm:inline">Fale com a gente</span>
+            </a>
+          </Magnetic>
+        </motion.div>
       )}
     </AnimatePresence>
   );
