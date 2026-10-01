@@ -170,8 +170,11 @@ body {
 }
 
 /* ---------- Botões (transições específicas, curvas fortes, hover só com mouse) ---------- */
+/* position fica numa camada abaixo das utilidades: "absolute"/"fixed" do Tailwind vencem. */
+@layer components {
+  .btn { position: relative; }
+}
 .btn {
-  position: relative;
   isolation: isolate;
   overflow: hidden;
   transition:

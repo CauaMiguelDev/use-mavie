@@ -10,6 +10,7 @@ import { Toaster, toast } from "sonner";
 import { BASE, WHATSAPP, img, brl, formatPhone, imageSrc, orderMessage, sizesOf, totalStock, whatsappUrl, INSTAGRAM, type BagItem, type Product } from "./products";
 
 import { useLiveCatalog } from "./supabase";
+import { ProductView } from "./product-view";
 import { Magnetic, RevealText, ScrollProgress, SilkBackground, Sparkles, Tilt, VelocityMarquee, useButtonSpotlight } from "./fx";
 
 const ease = [0.16, 1, 0.3, 1] as const;
@@ -57,20 +58,32 @@ export default function Store() {
   const count = bagItems.reduce((n, i) => n + i.qty, 0);
   const qtyOf = (id: string, size: string) => bagItems.filter((i) => i.id === id && i.size === size).reduce((n, i) => n + i.qty, 0);
 
-  function add(id: string, size: string) {
+  function add(id: string, size: string, qty = 1) {
     const prod = list.find((p) => p.id === id)!;
     const left = prod.stock[size] ?? 0;
-    if (qtyOf(id, size) >= left) {
+    if (qtyOf(id, size) + qty > left) {
       toast(`Só temos ${left} ${left === 1 ? "unidade" : "unidades"} de ${prod.name} no tamanho ${size}.`);
       return false;
     }
     setBag((b) => {
       const hit = b.find((i) => i.id === id && i.size === size);
-      return hit ? b.map((i) => (i === hit ? { ...i, qty: i.qty + 1 } : i)) : [...b, { id, size, qty: 1 }];
+      return hit ? b.map((i) => (i === hit ? { ...i, qty: i.qty + qty } : i)) : [...b, { id, size, qty }];
     });
-    toast(`${prod.name} (${size}) na sacola`, { action: { label: "Ver sacola", onClick: () => setOpen(true) } });
+    toast(`${qty > 1 ? `${qty}x ` : ""}${prod.name} (${size}) na sacola`, { action: { label: "Ver sacola", onClick: () => setOpen(true) } });
     return true;
   }
+
+  // Página do produto. Um link com #p/id abre o produto ao carregar a loja.
+  // ponytail: abrir/fechar não mexe no endereço; o roteador do vinext pausa a renderização a cada
+  // mudança de URL e trava as animações. Se o "voltar" do celular precisar fechar, revisar com o vinext estável.
+  const [viewId, setViewId] = useState<string | null>(null);
+  useEffect(() => {
+    const m = /^#p\/(.+)$/.exec(location.hash);
+    if (m) setViewId(decodeURIComponent(m[1]));
+  }, []);
+  const openProduct = (id: string) => setViewId(id);
+  const closeProduct = () => setViewId(null);
+  const viewing = visible.find((p) => p.id === viewId) ?? null;
 
   function change(item: BagItem, delta: number) {
     const prod = list.find((p) => p.id === item.id)!;
@@ -85,7 +98,7 @@ export default function Store() {
       <main>
         <Hero />
         <Marquee />
-        <Catalog items={visible} categories={cat.categories} onAdd={add} />
+        <Catalog items={visible} categories={cat.categories} onAdd={add} onOpen={openProduct} />
         <Lookbook />
         <About />
         <Exchanges />
@@ -93,6 +106,7 @@ export default function Store() {
       <Footer whatsapp={WHATSAPP} />
       <WhatsAppFab number={WHATSAPP} hidden={open} />
       <Bag open={open} items={bagItems} list={list} whatsapp={WHATSAPP} onClose={() => setOpen(false)} onChange={change} />
+      <ProductView product={viewing} list={visible} inBag={qtyOf} onAdd={add} onOpen={openProduct} onClose={closeProduct} />
       <Toaster position="bottom-center" toastOptions={{ className: "glass", style: { borderRadius: 999, fontFamily: "var(--font-sans)" } }} />
     </div>
   );
@@ -453,7 +467,7 @@ function Marquee() {
 }
 
 // ---------- Catálogo ----------
-function Catalog({ items, categories: allCategories, onAdd }: { items: Product[]; categories: string[]; onAdd: (id: string, size: string) => boolean }) {
+function Catalog({ items, categories: allCategories, onAdd, onOpen }: { items: Product[]; categories: string[]; onAdd: (id: string, size: string) => boolean; onOpen: (id: string) => void }) {
   const [filter, setFilter] = useState<string>("Todas");
   const categories = allCategories.filter((c) => items.some((p) => p.category === c));
   // Confirmação no próprio botão de tamanho: vira ✓ por um instante.
@@ -524,6 +538,7 @@ function Catalog({ items, categories: allCategories, onAdd }: { items: Product[]
                       show: { scale: 1, transition: { duration: 1.1, delay: (i % 4) * 0.06, ease } },
                     }}
                   >
+                  <button type="button" onClick={() => onOpen(p.id)} aria-label={`Ver ${p.name}`} className="block w-full cursor-pointer rounded-2xl text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose/40">
                   <Tilt className="aspect-[3/4] overflow-hidden rounded-2xl bg-muted">
                     <img
                       src={imageSrc(p.image)}
@@ -532,10 +547,16 @@ function Catalog({ items, categories: allCategories, onAdd }: { items: Product[]
                       className={`h-full w-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-[1.06] ${soldOut ? "opacity-50 grayscale" : ""}`}
                     />
                     <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/5" />
+                    <span className="glass pointer-events-none absolute inset-x-3 bottom-3 translate-y-2 rounded-full py-2 text-center text-xs font-medium opacity-0 transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:translate-y-0 group-hover:opacity-100">
+                      Ver detalhes{(p.gallery?.length ?? 0) > 0 ? ` e ${p.gallery!.length + 1} fotos` : ""}
+                    </span>
                   </Tilt>
+                  </button>
                   </motion.div>
                   <div className="mt-4 flex items-start justify-between gap-2">
-                    <h3 className="text-sm font-medium leading-snug">{p.name}</h3>
+                    <h3 className="text-sm font-medium leading-snug">
+                      <button type="button" onClick={() => onOpen(p.id)} className="text-left transition-colors duration-300 hover:text-rose">{p.name}</button>
+                    </h3>
                     <span className="shrink-0 text-sm font-medium">{brl(p.price)}</span>
                   </div>
                   <p className={`mt-0.5 text-xs ${soldOut || stock <= 2 ? "text-rose" : "text-muted-foreground"}`}>
@@ -632,7 +653,7 @@ function About() {
         className="relative"
       >
         <div ref={imgRef} className="aspect-[4/5] overflow-hidden rounded-[2rem]">
-          <motion.img style={{ y: imgY, scale: 1.14 }} src={img("loja")} alt="Ilustração da loja USE MAVIÊ com sacolas da marca" loading="lazy" className="size-full object-cover" />
+          <motion.img style={{ y: imgY, scale: 1.14 }} src={img("decote-v-preto")} alt="Modelo com vestido longo preto de decote V da USE MAVIÊ" loading="lazy" className="size-full object-cover" />
         </div>
       </motion.div>
       <div>

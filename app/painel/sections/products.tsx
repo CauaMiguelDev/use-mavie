@@ -8,9 +8,9 @@ import { Switch } from "@/components/ui/switch";
 import { SIZES, brl, imageSrc, sizesOf, totalStock, type Product } from "../../products";
 import { addCategory, deleteProduct, saveProduct, toggleHidden } from "../admin-logic";
 import { useAdmin } from "../admin-store";
-import { Badge, Drawer, Empty, Field, ImageDrop, PageHeader, ease, inputCls } from "../ui";
+import { Badge, Drawer, Empty, Field, GalleryDrop, ImageDrop, PageHeader, ease, inputCls } from "../ui";
 
-const blank = (category: string): Product => ({ id: "", name: "", category, price: 0, image: "", stock: { P: 0, M: 0, G: 0 }, hidden: false });
+const blank = (category: string): Product => ({ id: "", name: "", category, price: 0, image: "", stock: { P: 0, M: 0, G: 0 }, hidden: false, color: "", colorHex: "#1c1719", model: "", gallery: [] });
 
 export function stockBadge(p: Product) {
   const n = totalStock(p);
@@ -115,7 +115,10 @@ function ProductForm({ product, onClose }: { product: Product; onClose: () => vo
   const { state, run, uploadImage } = useAdmin();
   const [busy, setBusy] = useState(false);
   // Cópia para editar; a foto publicada vira URL completa só para a prévia.
-  const [form, setForm] = useState<Product>(() => structuredClone({ ...product, image: product.image ? imageSrc(product.image) : "" }));
+  const [form, setForm] = useState<Product>(() =>
+    structuredClone({ ...product, image: product.image ? imageSrc(product.image) : "", gallery: (product.gallery ?? []).map(imageSrc) }),
+  );
+  const models = [...new Set(state.catalog.products.map((p) => p.model).filter(Boolean))] as string[];
   const [newCat, setNewCat] = useState("");
   const [tried, setTried] = useState(false);
   const isNew = !product.id;
@@ -141,8 +144,13 @@ function ProductForm({ product, onClose }: { product: Product; onClose: () => vo
     setBusy(true);
     try {
       // Foto nova sobe para o Supabase Storage; foto existente mantém o endereço original.
-      const image = /^data:/.test(form.image) ? await uploadImage(form.image) : product.image;
-      if (run((s) => saveProduct(s, { ...form, image }), isNew ? `Produto "${form.name.trim()}" cadastrado` : `Produto "${form.name.trim()}" atualizado`)) onClose();
+      const keep = (src: string, original?: string) => (/^data:/.test(src) ? uploadImage(src) : Promise.resolve(original ?? src));
+      const image = await keep(form.image, product.image);
+      // Fotos extras já publicadas voltam ao endereço original; novas sobem para o Storage.
+      const originals = new Map((product.gallery ?? []).map((g) => [imageSrc(g), g]));
+      const gallery = await Promise.all((form.gallery ?? []).map((g) => keep(g, originals.get(g))));
+      const model = form.model?.trim() || form.name.trim();
+      if (run((s) => saveProduct(s, { ...form, image, gallery, model, color: form.color?.trim() || undefined }), isNew ? `Produto "${form.name.trim()}" cadastrado` : `Produto "${form.name.trim()}" atualizado`)) onClose();
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -176,6 +184,10 @@ function ProductForm({ product, onClose }: { product: Product; onClose: () => vo
       <form id="product-form" onSubmit={submit} className="space-y-5" noValidate>
         <ImageDrop value={form.image} onChange={(image) => set({ image })} error={tried ? errors.image : ""} />
 
+        <Field label="Mais fotos (opcional)" htmlFor="p-gallery" help="Costas, detalhes, tecido. Aparecem na página do produto.">
+          <div id="p-gallery"><GalleryDrop value={form.gallery ?? []} onChange={(gallery) => set({ gallery })} /></div>
+        </Field>
+
         <Field label="Nome" htmlFor="p-name" error={tried ? errors.name : ""}>
           <input id="p-name" value={form.name} onChange={(e) => set({ name: e.target.value })} aria-invalid={tried && !!errors.name} placeholder="Ex.: Vestido Longo Cetim" className={inputCls} />
         </Field>
@@ -198,6 +210,19 @@ function ProductForm({ product, onClose }: { product: Product; onClose: () => vo
             </select>
           </Field>
         </div>
+        <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+          <Field label="Cor" htmlFor="p-color" help="Ex.: Noir, Bordô, Off-white">
+            <input id="p-color" value={form.color ?? ""} onChange={(e) => set({ color: e.target.value })} placeholder="Nome da cor" className={inputCls} />
+          </Field>
+          <Field label="Tom" htmlFor="p-hex">
+            <input id="p-hex" type="color" value={form.colorHex ?? "#1c1719"} onChange={(e) => set({ colorHex: e.target.value })} className="h-11 w-16 cursor-pointer rounded-2xl border border-border bg-background p-1" />
+          </Field>
+        </div>
+        <Field label="Modelo" htmlFor="p-model" help="Use o mesmo modelo em peças iguais de outra cor: elas aparecem juntas como opções de cor.">
+          <input id="p-model" list="p-models" value={form.model ?? ""} onChange={(e) => set({ model: e.target.value })} placeholder="Ex.: Vestido Alcinha" className={inputCls} />
+          <datalist id="p-models">{models.map((m) => <option key={m} value={m} />)}</datalist>
+        </Field>
+
         <div className="flex gap-2">
           <input aria-label="Nova categoria" value={newCat} onChange={(e) => setNewCat(e.target.value)} placeholder="Ou crie uma categoria nova" className={inputCls} />
           <button type="button" onClick={createCategory} disabled={!newCat.trim()} className="btn btn-fill h-11 shrink-0 rounded-2xl px-4 text-sm">Criar</button>

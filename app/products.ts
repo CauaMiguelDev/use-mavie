@@ -19,6 +19,10 @@ export type Product = {
   image: string; // "images/x.jpg" (pasta do site) ou URL do Supabase Storage
   stock: Record<string, number>; // por tamanho
   hidden?: boolean;
+  color?: string; // nome da cor, ex.: "Noir"
+  colorHex?: string;
+  model?: string; // produtos com o mesmo modelo aparecem como opções de cor
+  gallery?: string[]; // fotos extras
 };
 export type Catalog = { categories: string[]; products: Product[]; updatedAt: string };
 
@@ -26,6 +30,9 @@ export const catalog = data as Catalog;
 
 export const sizesOf = (p: Product) => SIZES.filter((s) => s in p.stock);
 export const totalStock = (p: Product) => Object.values(p.stock).reduce((n, q) => n + q, 0);
+// Outras cores do mesmo modelo (inclui o próprio produto), na ordem do catálogo.
+export const colorsOf = (p: Product, list: Product[]) => (p.model ? list.filter((x) => x.model === p.model && !x.hidden) : [p]);
+export const photosOf = (p: Product) => [p.image, ...(p.gallery ?? [])];
 export const imageSrc = (image: string) => (/^(data|blob|https?):/.test(image) ? image : `${BASE}/${image.replace(/^\//, "")}`);
 
 export const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

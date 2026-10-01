@@ -232,3 +232,56 @@ export function ImageDrop({ value, onChange, error }: { value: string; onChange:
     </div>
   );
 }
+
+// Fotos extras do produto: arraste várias de uma vez (até 6), remova individualmente.
+export function GalleryDrop({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const [over, setOver] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+  const MAX = 6;
+
+  async function take(files: FileList | null) {
+    const list = [...(files ?? [])].filter((f) => /^image\//.test(f.type)).slice(0, MAX - value.length);
+    if (!list.length) return;
+    setBusy(true);
+    try {
+      const out = [];
+      for (const f of list) {
+        if (f.size > 20 * 1024 * 1024) { toast.error(`${f.name} passa de 20 MB.`); continue; }
+        out.push(await compress(f));
+      }
+      onChange([...value, ...out]);
+    } catch {
+      toast.error("Não consegui ler uma das fotos.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {value.map((src, i) => (
+        <div key={i} className="group relative aspect-[3/4] overflow-hidden rounded-2xl bg-muted">
+          <img src={src} alt={`Foto extra ${i + 1}`} className="size-full object-cover" />
+          <button type="button" onClick={() => onChange(value.filter((_, k) => k !== i))} aria-label={`Remover foto extra ${i + 1}`} className="glass absolute right-1.5 top-1.5 grid size-7 place-items-center rounded-full">
+            <X className="size-3.5" />
+          </button>
+        </div>
+      ))}
+      {value.length < MAX && (
+        <button
+          type="button"
+          onClick={() => input.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+          onDragLeave={() => setOver(false)}
+          onDrop={(e) => { e.preventDefault(); setOver(false); take(e.dataTransfer.files); }}
+          aria-label="Adicionar fotos extras"
+          className={`grid aspect-[3/4] place-items-center rounded-2xl border-2 border-dashed text-center text-xs text-muted-foreground transition-colors duration-300 ${over ? "border-rose bg-rose-soft" : "border-border hover:border-rose/60"}`}
+        >
+          {busy ? <Loader2 className="size-5 animate-spin text-rose" /> : <span className="px-2"><ImagePlus className="mx-auto mb-1 size-5" strokeWidth={1.4} />Arraste ou clique</span>}
+        </button>
+      )}
+      <input ref={input} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { take(e.target.files); e.target.value = ""; }} />
+    </div>
+  );
+}

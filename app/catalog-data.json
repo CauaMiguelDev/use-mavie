@@ -17,7 +17,11 @@
         "M": 2,
         "G": 1
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Noir",
+      "colorHex": "#1c1719",
+      "model": "Vestido Longo Fenda",
+      "gallery": []
     },
     {
       "id": "babado-marrom",
@@ -30,7 +34,11 @@
         "M": 1,
         "G": 1
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Cacau",
+      "colorHex": "#6b4532",
+      "model": "Vestido Babado",
+      "gallery": []
     },
     {
       "id": "recorte-azul",
@@ -43,7 +51,11 @@
         "M": 2,
         "G": 1
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Céu",
+      "colorHex": "#a9c8ec",
+      "model": "Vestido Recorte",
+      "gallery": []
     },
     {
       "id": "corset-marrom",
@@ -56,7 +68,11 @@
         "M": 1,
         "G": 0
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Cacau",
+      "colorHex": "#6b4532",
+      "model": "Corset",
+      "gallery": []
     },
     {
       "id": "costas-nuas-preto",
@@ -69,7 +85,11 @@
         "M": 1,
         "G": 1
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Noir",
+      "colorHex": "#1c1719",
+      "model": "Vestido Costas Nuas",
+      "gallery": []
     },
     {
       "id": "alcinha-preto",
@@ -82,7 +102,11 @@
         "M": 2,
         "G": 2
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Noir",
+      "colorHex": "#1c1719",
+      "model": "Vestido Alcinha",
+      "gallery": []
     },
     {
       "id": "midi-vinho",
@@ -95,7 +119,11 @@
         "M": 2,
         "G": 1
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Bordô",
+      "colorHex": "#6d1f2e",
+      "model": "Vestido Midi",
+      "gallery": []
     },
     {
       "id": "conjunto-recorte-preto",
@@ -108,7 +136,11 @@
         "M": 1,
         "G": 1
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Noir",
+      "colorHex": "#1c1719",
+      "model": "Conjunto Recorte",
+      "gallery": []
     },
     {
       "id": "body-renda-branco",
@@ -121,7 +153,11 @@
         "M": 2,
         "G": 1
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Pérola",
+      "colorHex": "#efe8df",
+      "model": "Body Renda",
+      "gallery": []
     },
     {
       "id": "amarracao-preto",
@@ -134,7 +170,11 @@
         "M": 0,
         "G": 0
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Noir",
+      "colorHex": "#1c1719",
+      "model": "Vestido Amarração",
+      "gallery": []
     },
     {
       "id": "longo-azul",
@@ -147,7 +187,11 @@
         "M": 2,
         "G": 1
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Céu",
+      "colorHex": "#a9c8ec",
+      "model": "Vestido Longo Decote",
+      "gallery": []
     },
     {
       "id": "drapeado-preto",
@@ -160,7 +204,11 @@
         "M": 1,
         "G": 0
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Noir",
+      "colorHex": "#1c1719",
+      "model": "Vestido Drapeado Manga Longa",
+      "gallery": []
     },
     {
       "id": "conjunto-vinho",
@@ -173,7 +221,11 @@
         "M": 1,
         "G": 1
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Bordô",
+      "colorHex": "#6d1f2e",
+      "model": "Conjunto Saia",
+      "gallery": []
     },
     {
       "id": "um-ombro-preto",
@@ -186,7 +238,11 @@
         "M": 1,
         "G": 0
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Noir",
+      "colorHex": "#1c1719",
+      "model": "Vestido Um Ombro Fenda",
+      "gallery": []
     },
     {
       "id": "alcinha-marrom",
@@ -199,7 +255,11 @@
         "M": 2,
         "G": 1
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Cacau",
+      "colorHex": "#6b4532",
+      "model": "Vestido Alcinha",
+      "gallery": []
     },
     {
       "id": "decote-v-preto",
@@ -212,7 +272,11 @@
         "M": 2,
         "G": 1
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Noir",
+      "colorHex": "#1c1719",
+      "model": "Vestido Longo Decote V",
+      "gallery": []
     },
     {
       "id": "conjunto-longo-preto",
@@ -225,7 +289,11 @@
         "M": 1,
         "G": 1
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Noir",
+      "colorHex": "#1c1719",
+      "model": "Conjunto Saia Longa",
+      "gallery": []
     },
     {
       "id": "renda-preto",
@@ -238,7 +306,11 @@
         "M": 2,
         "G": 1
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Noir",
+      "colorHex": "#1c1719",
+      "model": "Vestido Barra de Renda",
+      "gallery": []
     },
     {
       "id": "longo-vinho",
@@ -251,7 +323,11 @@
         "M": 1,
         "G": 0
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Bordô",
+      "colorHex": "#6d1f2e",
+      "model": "Vestido Longo",
+      "gallery": []
     },
     {
       "id": "godet-preto",
@@ -264,7 +340,11 @@
         "M": 2,
         "G": 1
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Noir",
+      "colorHex": "#1c1719",
+      "model": "Vestido Godê",
+      "gallery": []
     },
     {
       "id": "recorte-branco-azul",
@@ -277,7 +357,11 @@
         "M": 1,
         "G": 1
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Bicolor",
+      "colorHex": "#cfe0f3",
+      "model": "Vestido Recorte",
+      "gallery": []
     },
     {
       "id": "longo-fenda-marinho",
@@ -290,7 +374,11 @@
         "M": 1,
         "G": 0
       },
-      "hidden": false
+      "hidden": false,
+      "color": "Marinho",
+      "colorHex": "#1f2a44",
+      "model": "Vestido Longo Fenda",
+      "gallery": []
     }
   ],
   "updatedAt": "2026-10-01T00:00:00.000Z"
