@@ -888,18 +888,30 @@ function Bag({ open, items, list, whatsapp, onClose, onChange }: {
   );
 }
 
-// Botão flutuante de atendimento; some enquanto a sacola está aberta.
+// Botão flutuante de atendimento; some com a sacola aberta e quando o rodapé aparece
+// (o rodapé já tem o WhatsApp, e o botão cobria o acesso ao painel e o "voltar ao topo").
 function WhatsAppFab({ number, hidden }: { number: string; hidden: boolean }) {
   const reduce = useReducedMotion();
+  const [atFooter, setAtFooter] = useState(false);
+  const shown = useRef(false);
+  useEffect(() => {
+    const footer = document.querySelector("footer");
+    if (!footer) return;
+    const io = new IntersectionObserver(([e]) => setAtFooter(e.isIntersecting), { rootMargin: "0px 0px -60px 0px" });
+    io.observe(footer);
+    return () => io.disconnect();
+  }, []);
   if (!number) return null;
   return (
     <AnimatePresence>
-      {!hidden && (
+      {!hidden && !atFooter && (
         <motion.div
           initial={reduce ? false : { opacity: 0, y: 24, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 16, scale: 0.95, transition: { duration: 0.2 } }}
-          transition={{ duration: 0.6, delay: 1.4, ease }}
+          // atraso só na primeira aparição (depois da hero); ao voltar do rodapé, aparece na hora
+          transition={{ duration: 0.4, delay: shown.current ? 0 : 1.4, ease }}
+          onAnimationComplete={() => { shown.current = true; }}
           className="fixed bottom-5 right-5 z-40 md:bottom-7 md:right-7"
         >
             <a
