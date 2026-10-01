@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ShoppingBag, Ticket, TrendingUp, Shirt } from "lucide-react";
-import { brl, imageSrc } from "../../products";
+import { brl, focusPos, imageSrc } from "../../products";
 import { CHANNELS, isRevenue, orderTotal, revenueDate, type AdminState } from "../admin-logic";
 import { useAdmin } from "../admin-store";
 import { Card, ChartTip, Empty, PageHeader, Stat, compactBrl } from "../ui";
@@ -99,7 +99,7 @@ export default function Sales() {
                 return (
                   <li key={id} className="flex items-center gap-3 rounded-2xl p-2 hover:bg-muted/60">
                     <span className="w-5 text-sm font-semibold text-muted-foreground tabular-nums">{i + 1}</span>
-                    {p && <img src={imageSrc(p.image)} alt="" className="size-10 rounded-xl object-cover" />}
+                    {p && <img src={imageSrc(p.image)} alt="" style={{ objectPosition: focusPos(p) }} className="size-10 rounded-xl object-cover" />}
                     <span className="min-w-0 flex-1 truncate text-sm">{t.name}</span>
                     <span className="text-xs text-muted-foreground tabular-nums">{t.qty} pç</span>
                     <span className="w-24 text-right text-sm font-semibold tabular-nums">{brl(t.total)}</span>

@@ -21,7 +21,11 @@
       "color": "Noir",
       "colorHex": "#1c1719",
       "model": "Vestido Longo Fenda",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        40,
+        25
+      ]
     },
     {
       "id": "babado-marrom",
@@ -38,7 +42,11 @@
       "color": "Cacau",
       "colorHex": "#6b4532",
       "model": "Vestido Babado",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        52,
+        15
+      ]
     },
     {
       "id": "recorte-azul",
@@ -55,7 +63,11 @@
       "color": "Céu",
       "colorHex": "#a9c8ec",
       "model": "Vestido Recorte",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        47,
+        9
+      ]
     },
     {
       "id": "corset-marrom",
@@ -72,7 +84,11 @@
       "color": "Cacau",
       "colorHex": "#6b4532",
       "model": "Corset",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        43,
+        31
+      ]
     },
     {
       "id": "costas-nuas-preto",
@@ -89,7 +105,11 @@
       "color": "Noir",
       "colorHex": "#1c1719",
       "model": "Vestido Costas Nuas",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        22,
+        10
+      ]
     },
     {
       "id": "alcinha-preto",
@@ -106,7 +126,11 @@
       "color": "Noir",
       "colorHex": "#1c1719",
       "model": "Vestido Alcinha",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        47,
+        7
+      ]
     },
     {
       "id": "midi-vinho",
@@ -123,7 +147,11 @@
       "color": "Bordô",
       "colorHex": "#6d1f2e",
       "model": "Vestido Midi",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        49,
+        13
+      ]
     },
     {
       "id": "conjunto-recorte-preto",
@@ -140,7 +168,11 @@
       "color": "Noir",
       "colorHex": "#1c1719",
       "model": "Conjunto Recorte",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        44,
+        12
+      ]
     },
     {
       "id": "body-renda-branco",
@@ -157,7 +189,11 @@
       "color": "Pérola",
       "colorHex": "#efe8df",
       "model": "Body Renda",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        53,
+        10
+      ]
     },
     {
       "id": "amarracao-preto",
@@ -174,7 +210,11 @@
       "color": "Noir",
       "colorHex": "#1c1719",
       "model": "Vestido Amarração",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        47,
+        21
+      ]
     },
     {
       "id": "longo-azul",
@@ -191,7 +231,11 @@
       "color": "Céu",
       "colorHex": "#a9c8ec",
       "model": "Vestido Longo Decote",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        48,
+        13
+      ]
     },
     {
       "id": "drapeado-preto",
@@ -208,7 +252,11 @@
       "color": "Noir",
       "colorHex": "#1c1719",
       "model": "Vestido Drapeado Manga Longa",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        53,
+        28
+      ]
     },
     {
       "id": "conjunto-vinho",
@@ -225,7 +273,11 @@
       "color": "Bordô",
       "colorHex": "#6d1f2e",
       "model": "Conjunto Saia",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        50,
+        30
+      ]
     },
     {
       "id": "um-ombro-preto",
@@ -242,7 +294,11 @@
       "color": "Noir",
       "colorHex": "#1c1719",
       "model": "Vestido Um Ombro Fenda",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        63,
+        10
+      ]
     },
     {
       "id": "alcinha-marrom",
@@ -259,7 +315,11 @@
       "color": "Cacau",
       "colorHex": "#6b4532",
       "model": "Vestido Alcinha",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        35,
+        13
+      ]
     },
     {
       "id": "decote-v-preto",
@@ -276,7 +336,11 @@
       "color": "Noir",
       "colorHex": "#1c1719",
       "model": "Vestido Longo Decote V",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        37,
+        12
+      ]
     },
     {
       "id": "conjunto-longo-preto",
@@ -293,7 +357,11 @@
       "color": "Noir",
       "colorHex": "#1c1719",
       "model": "Conjunto Saia Longa",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        49,
+        14
+      ]
     },
     {
       "id": "renda-preto",
@@ -310,7 +378,11 @@
       "color": "Noir",
       "colorHex": "#1c1719",
       "model": "Vestido Barra de Renda",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        50,
+        7
+      ]
     },
     {
       "id": "longo-vinho",
@@ -327,7 +399,11 @@
       "color": "Bordô",
       "colorHex": "#6d1f2e",
       "model": "Vestido Longo",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        45,
+        12
+      ]
     },
     {
       "id": "godet-preto",
@@ -344,7 +420,11 @@
       "color": "Noir",
       "colorHex": "#1c1719",
       "model": "Vestido Godê",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        47,
+        18
+      ]
     },
     {
       "id": "recorte-branco-azul",
@@ -361,7 +441,11 @@
       "color": "Bicolor",
       "colorHex": "#cfe0f3",
       "model": "Vestido Recorte",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        30,
+        34
+      ]
     },
     {
       "id": "longo-fenda-marinho",
@@ -378,7 +462,11 @@
       "color": "Marinho",
       "colorHex": "#1f2a44",
       "model": "Vestido Longo Fenda",
-      "gallery": []
+      "gallery": [],
+      "focus": [
+        50,
+        30
+      ]
     }
   ],
   "updatedAt": "2026-10-01T00:00:00.000Z"

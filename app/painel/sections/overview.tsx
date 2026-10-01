@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AlertTriangle, Boxes, ClipboardList, TrendingUp, Check } from "lucide-react";
-import { brl, imageSrc, totalStock } from "../../products";
+import { brl, focusPos, imageSrc, totalStock } from "../../products";
 import { orderTotal } from "../admin-logic";
 import { useAdmin } from "../admin-store";
 import { Badge, Card, ChartTip, PageHeader, Stat, compactBrl, dateTime } from "../ui";
@@ -71,7 +71,7 @@ export default function Overview({ go }: { go: (section: string) => void }) {
             <ul className="space-y-2">
               {low.slice(0, 5).map((p) => (
                 <li key={p.id} className="flex items-center gap-3 rounded-2xl p-2 hover:bg-muted/60">
-                  <img src={imageSrc(p.image)} alt="" className="size-10 rounded-xl object-cover" />
+                  <img src={imageSrc(p.image)} alt="" style={{ objectPosition: focusPos(p) }} className="size-10 rounded-xl object-cover" />
                   <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
                   {totalStock(p) === 0 ? <Badge tone="red">Esgotado</Badge> : <Badge tone="amber">{totalStock(p)} restantes</Badge>}
                 </li>

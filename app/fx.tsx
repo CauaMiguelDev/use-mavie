@@ -5,31 +5,6 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { type MotionValue, motion, useAnimationFrame, useMotionTemplate, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform, useVelocity } from "motion/react";
 
 const ease = [0.16, 1, 0.3, 1] as const;
-const soft = { stiffness: 120, damping: 18, mass: 0.6 };
-
-// Puxa suavemente em direção ao cursor e volta com mola.
-export function Magnetic({ children, strength = 0.22, className = "" }: { children: ReactNode; strength?: number; className?: string }) {
-  const reduce = useReducedMotion();
-  const ref = useRef<HTMLSpanElement>(null);
-  const x = useSpring(0, soft);
-  const y = useSpring(0, soft);
-  return (
-    <motion.span
-      ref={ref}
-      style={{ x, y }}
-      className={`inline-block ${className}`}
-      onPointerMove={(e) => {
-        if (reduce || e.pointerType !== "mouse") return;
-        const r = ref.current!.getBoundingClientRect();
-        x.set((e.clientX - r.left - r.width / 2) * strength);
-        y.set((e.clientY - r.top - r.height / 2) * strength);
-      }}
-      onPointerLeave={() => { x.set(0); y.set(0); }}
-    >
-      {children}
-    </motion.span>
-  );
-}
 
 export function ScrollProgress() {
   const { scrollYProgress } = useScroll();
@@ -58,38 +33,6 @@ export function RevealText({ text, className = "", accent, as = "h2" }: { text: 
         </span>
       ))}
     </Tag>
-  );
-}
-
-// Inclinação 3D leve seguindo o cursor, com reflexo de luz.
-export function Tilt({ children, className = "", max = 5 }: { children: ReactNode; className?: string; max?: number }) {
-  const reduce = useReducedMotion();
-  const ref = useRef<HTMLDivElement>(null);
-  const px = useMotionValue(0.5);
-  const py = useMotionValue(0.5);
-  const rx = useSpring(useTransform(py, [0, 1], [max, -max]), soft);
-  const ry = useSpring(useTransform(px, [0, 1], [-max, max]), soft);
-  const gx = useTransform(px, (v) => `${v * 100}%`);
-  const gy = useTransform(py, (v) => `${v * 100}%`);
-  const glare = useMotionTemplate`radial-gradient(circle at ${gx} ${gy}, rgb(255 255 255 / 0.22), transparent 55%)`;
-  return (
-    <motion.div
-      ref={ref}
-      style={reduce ? undefined : { rotateX: rx, rotateY: ry, transformPerspective: 1000 }}
-      className={`group/tilt relative ${className}`}
-      onPointerMove={(e) => {
-        if (reduce || e.pointerType !== "mouse") return;
-        const r = ref.current!.getBoundingClientRect();
-        px.set((e.clientX - r.left) / r.width);
-        py.set((e.clientY - r.top) / r.height);
-      }}
-      onPointerLeave={() => { px.set(0.5); py.set(0.5); }}
-    >
-      {children}
-      {!reduce && (
-        <motion.div style={{ background: glare }} className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover/tilt:opacity-100" />
-      )}
-    </motion.div>
   );
 }
 
@@ -228,20 +171,18 @@ export function Sparkles() {
   );
 }
 
-// Um único listener para todos os botões: guarda a posição do cursor em --mx/--my (holofote no CSS).
-export function useButtonSpotlight() {
-  useEffect(() => {
-    if (!matchMedia("(hover: hover) and (pointer: fine)").matches) return;
-    const move = (e: PointerEvent) => {
-      const b = (e.target as Element | null)?.closest?.(".btn") as HTMLElement | null;
-      if (!b) return;
-      const r = b.getBoundingClientRect();
-      b.style.setProperty("--mx", `${e.clientX - r.left}px`);
-      b.style.setProperty("--my", `${e.clientY - r.top}px`);
-    };
-    document.addEventListener("pointermove", move, { passive: true });
-    return () => document.removeEventListener("pointermove", move);
-  }, []);
+// Parallax: a caixa inteira se desloca em velocidade própria durante a rolagem.
+// A foto dentro dela fica parada e enquadrada (nada de imagem deslizando na moldura).
+export function Parallax({ children, speed = 40, className = "" }: { children: ReactNode; speed?: number; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const y = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [speed, -speed]);
+  return (
+    <motion.div ref={ref} style={{ y }} className={className}>
+      {children}
+    </motion.div>
+  );
 }
 
 // Faixa que desliza sozinha e acelera conforme a velocidade da rolagem (desacelera com mola).

@@ -23,10 +23,14 @@ export type Product = {
   colorHex?: string;
   model?: string; // produtos com o mesmo modelo aparecem como opções de cor
   gallery?: string[]; // fotos extras
+  focus?: [number, number]; // onde está o rosto na foto (% x, % y), para enquadrar sem cortar
 };
+
+// object-position que mantém o rosto à vista em qualquer proporção de caixa.
+export const focusPos = (p: Pick<Product, "focus">) => (p.focus ? `${p.focus[0]}% ${p.focus[1]}%` : "50% 20%");
 export type Catalog = { categories: string[]; products: Product[]; updatedAt: string };
 
-export const catalog = data as Catalog;
+export const catalog = data as unknown as Catalog; // JSON não guarda o tipo da tupla focus
 
 export const sizesOf = (p: Product) => SIZES.filter((s) => s in p.stock);
 export const totalStock = (p: Product) => Object.values(p.stock).reduce((n, q) => n + q, 0);

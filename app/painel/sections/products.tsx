@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Eye, EyeOff, Loader2, PackagePlus, Pencil, Search, Shirt, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
-import { SIZES, brl, imageSrc, sizesOf, totalStock, type Product } from "../../products";
+import { SIZES, brl, focusPos, imageSrc, sizesOf, totalStock, type Product } from "../../products";
 import { addCategory, deleteProduct, saveProduct, toggleHidden } from "../admin-logic";
 import { useAdmin } from "../admin-store";
 import { Badge, Drawer, Empty, Field, GalleryDrop, ImageDrop, PageHeader, ease, inputCls } from "../ui";
@@ -67,7 +67,7 @@ export default function Products() {
                 transition={{ duration: 0.5, ease }}
                 className={`box box-hover flex gap-4 p-3 ${p.hidden ? "opacity-60" : ""}`}
               >
-                <img src={imageSrc(p.image)} alt="" className="h-32 w-24 shrink-0 rounded-2xl object-cover" />
+                <img src={imageSrc(p.image)} alt="" style={{ objectPosition: focusPos(p) }} className="h-32 w-24 shrink-0 rounded-2xl object-cover" />
                 <div className="flex min-w-0 flex-1 flex-col">
                   <p className="truncate font-medium">{p.name}</p>
                   <p className="text-xs text-muted-foreground">{p.category}</p>

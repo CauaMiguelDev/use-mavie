@@ -297,23 +297,6 @@ html.lenis, html.lenis body { height: auto; }
 .chart .recharts-tooltip-cursor { fill: color-mix(in oklab, var(--rose) 10%, transparent); }
 .chart .recharts-surface:focus { outline: none; }
 
-/* Holofote que segue o cursor dentro dos botões (--mx/--my vêm de fx.tsx) */
-.btn::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: radial-gradient(140px circle at var(--mx, 50%) var(--my, 50%), rgb(255 255 255 / 0.32), transparent 65%);
-  opacity: 0;
-  transition: opacity 400ms ease;
-  pointer-events: none;
-}
-.btn-fill::after { background: radial-gradient(140px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklab, var(--rose) 22%, transparent), transparent 65%); }
-@media (hover: hover) and (pointer: fine) {
-  .btn:not(:disabled):hover::after { opacity: 1; }
-}
-
 /* Brilho que percorre as letras de "Maviê." */
 @keyframes letter-shine {
   0%, 100% { filter: brightness(1); }
@@ -323,5 +306,4 @@ html.lenis, html.lenis body { height: auto; }
 
 @media (prefers-reduced-motion: reduce) {
   .letter-shine { animation: none; }
-  .btn::after { transition: none; }
 }

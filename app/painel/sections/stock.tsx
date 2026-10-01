@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ArrowDownToLine, Boxes, Clock, Minus, PackageCheck, Plus, Search, AlertTriangle, CircleSlash } from "lucide-react";
-import { imageSrc, sizesOf, totalStock } from "../../products";
+import { focusPos, imageSrc, sizesOf, totalStock } from "../../products";
 import { adjustStock, type Movement } from "../admin-logic";
 import { useAdmin } from "../admin-store";
 import { Badge, Card, Empty, Field, PageHeader, Stat, dateTime, inputCls } from "../ui";
@@ -55,7 +55,7 @@ export default function Stock() {
               {rows.map((p) => (
                 <li key={p.id} className="flex flex-col gap-3 py-3 lg:flex-row lg:items-center">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <img src={imageSrc(p.image)} alt="" className="size-12 shrink-0 rounded-xl object-cover" />
+                    <img src={imageSrc(p.image)} alt="" style={{ objectPosition: focusPos(p) }} className="size-12 shrink-0 rounded-xl object-cover" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{p.name}</p>
                       <p className="text-xs text-muted-foreground">{totalStock(p)} no total</p>

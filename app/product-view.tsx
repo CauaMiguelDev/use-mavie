@@ -1,13 +1,43 @@
 "use client";
 
 // Página ampliada do produto (abre por cima da loja): galeria, cores, tamanho, quantidade e sacola.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight, MessageCircle, Minus, Plus, RefreshCw, ShoppingBag, Truck, X } from "lucide-react";
 import { Dialog as D } from "radix-ui";
-import { WHATSAPP, brl, colorsOf, imageSrc, photosOf, sizesOf, totalStock, whatsappUrl, type Product } from "./products";
+import { WHATSAPP, brl, colorsOf, focusPos, imageSrc, photosOf, sizesOf, totalStock, whatsappUrl, type Product } from "./products";
 
 const ease = [0.16, 1, 0.3, 1] as const;
+
+type View = { src: string; label: string; pos: string; scale: number };
+
+// Fotos reais primeiro. Com menos de 3, completa com aproximações da própria foto principal
+// (decote, cintura, barra), sem inventar imagem que a peça não tem.
+export function galleryViews(p: Product, photos: string[]): View[] {
+  const [fx, fy] = p.focus ?? [50, 18];
+  const clamp = (n: number) => Math.min(96, Math.max(4, n));
+  const real = photos.map((src, i) => ({ src, label: i === 0 ? "Foto principal" : `Foto ${i + 1}`, pos: i === 0 ? focusPos(p) : "50% 25%", scale: 1 }));
+  if (real.length >= 3) return real;
+  const details = [
+    { label: "Detalhe do decote", pos: `${fx}% ${clamp(fy + 16)}%`, scale: 2 },
+    { label: "Detalhe da cintura", pos: `${fx}% ${clamp(fy + 40)}%`, scale: 1.9 },
+    { label: "Detalhe da barra", pos: `${fx}% ${clamp(fy + 66)}%`, scale: 1.8 },
+  ].map((d) => ({ ...d, src: photos[0] }));
+  return [...real, ...details].slice(0, real.length + 3);
+}
+
+function ViewImage({ view, alt, eager }: { view: View; alt: string; eager?: boolean }) {
+  return (
+    <img
+      src={imageSrc(view.src)}
+      alt={alt}
+      draggable={false}
+      loading={eager ? "eager" : "lazy"}
+      className="pointer-events-none absolute inset-0 size-full select-none object-cover"
+      style={{ objectPosition: view.pos, transform: view.scale > 1 ? `scale(${view.scale})` : undefined, transformOrigin: view.pos }}
+    />
+  );
+}
 
 export function ProductView({ product, list, inBag, onAdd, onOpen, onClose }: {
   product: Product | null;
@@ -57,25 +87,29 @@ function Body({ p, list, inBag, onAdd, onOpen, onClose }: {
 }) {
   const reduce = useReducedMotion();
   const photos = photosOf(p);
-  const [photo, setPhoto] = useState(0);
+  const views = galleryViews(p, photos);
+  const [[photo, dir], setPhotoDir] = useState<[number, number]>([0, 0]);
+  const go = (d: number) => setPhotoDir(([i]) => [(i + d + views.length) % views.length, d]);
   const sizes = sizesOf(p);
   const [size, setSize] = useState(() => sizes.find((s) => p.stock[s] > 0) ?? "");
   const [qty, setQty] = useState(1);
-  const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
   const colors = colorsOf(p, list);
   const left = size ? (p.stock[size] ?? 0) - inBag(p.id, size) : 0;
   const soldOut = totalStock(p) === 0;
-  const related = list.filter((x) => x.category === p.category && x.id !== p.id && x.model !== p.model && !x.hidden).slice(0, 4);
+  // Mesma categoria primeiro, depois o resto; sem repetir o modelo aberto.
+  const others = list.filter((x) => x.id !== p.id && x.model !== p.model && !x.hidden);
+  const related = [...others.filter((x) => x.category === p.category), ...others.filter((x) => x.category !== p.category)].slice(0, 10);
 
   // setas do teclado trocam a foto
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") setPhoto((i) => (i + 1) % photos.length);
-      if (e.key === "ArrowLeft") setPhoto((i) => (i - 1 + photos.length) % photos.length);
+      if (e.key === "ArrowRight") go(1);
+      if (e.key === "ArrowLeft") go(-1);
     };
     addEventListener("keydown", key);
     return () => removeEventListener("keydown", key);
-  }, [photos.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [views.length]);
 
   function add() {
     if (!size) return;
@@ -91,51 +125,61 @@ function Body({ p, list, inBag, onAdd, onOpen, onClose }: {
       <div className="grid md:grid-cols-[1.1fr_1fr]">
         {/* Galeria */}
         <div className="bg-muted/60 p-3 md:p-4">
-          <div
-            className="relative aspect-[3/4] cursor-zoom-in overflow-hidden rounded-[1.5rem] bg-muted"
-            onPointerMove={(e) => {
-              if (e.pointerType !== "mouse" || reduce) return;
-              const r = e.currentTarget.getBoundingClientRect();
-              setZoom({ x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 });
+          {/* Arraste para os lados no celular; setas e teclado no computador. */}
+          <motion.div
+            className="relative aspect-[3/4] touch-pan-y overflow-hidden rounded-[1.5rem] bg-muted"
+            drag={views.length > 1 ? "x" : false}
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.18}
+            onDragEnd={(_, info) => {
+              if (info.offset.x < -50 || info.velocity.x < -400) go(1);
+              else if (info.offset.x > 50 || info.velocity.x > 400) go(-1);
             }}
-            onPointerLeave={() => setZoom(null)}
           >
-            <AnimatePresence mode="popLayout" initial={false}>
-              <motion.img
-                key={photos[photo]}
-                src={imageSrc(photos[photo])}
-                alt={`${p.name}, foto ${photo + 1} de ${photos.length}`}
-                initial={reduce ? false : { opacity: 0, scale: 1.04 }}
-                animate={{ opacity: 1, scale: zoom ? 1.8 : 1 }}
-                exit={{ opacity: 0 }}
+            <AnimatePresence mode="popLayout" initial={false} custom={dir}>
+              <motion.div
+                key={photo}
+                custom={dir}
+                className="absolute inset-0"
+                variants={{
+                  enter: (d: number) => (reduce ? { opacity: 0 } : { opacity: 0, x: d >= 0 ? "12%" : "-12%" }),
+                  center: { opacity: 1, x: 0 },
+                  exit: (d: number) => (reduce ? { opacity: 0 } : { opacity: 0, x: d >= 0 ? "-12%" : "12%" }),
+                }}
+                initial="enter"
+                animate="center"
+                exit="exit"
                 transition={{ duration: 0.5, ease }}
-                style={{ transformOrigin: zoom ? `${zoom.x}% ${zoom.y}%` : "50% 50%" }}
-                className="absolute inset-0 size-full object-cover"
-              />
+              >
+                <ViewImage view={views[photo]} alt={`${p.name}: ${views[photo].label}`} eager />
+              </motion.div>
             </AnimatePresence>
-            {photos.length > 1 && (
+            {views.length > 1 && (
               <>
-                <button onClick={() => setPhoto((i) => (i - 1 + photos.length) % photos.length)} aria-label="Foto anterior" className="btn glass absolute left-3 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full">
+                <button onClick={() => go(-1)} aria-label="Foto anterior" className="btn glass absolute left-3 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full">
                   <ChevronLeft className="size-5" />
                 </button>
-                <button onClick={() => setPhoto((i) => (i + 1) % photos.length)} aria-label="Próxima foto" className="btn glass absolute right-3 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full">
+                <button onClick={() => go(1)} aria-label="Próxima foto" className="btn glass absolute right-3 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full">
                   <ChevronRight className="size-5" />
                 </button>
+                <span className="glass absolute bottom-3 left-3 z-10 rounded-full px-3 py-1 text-xs font-medium tabular-nums">
+                  {photo + 1} / {views.length} · {views[photo].label}
+                </span>
               </>
             )}
-          </div>
-          {photos.length > 1 && (
+          </motion.div>
+          {views.length > 1 && (
             <div className="mt-3 flex gap-2 overflow-x-auto scrollbar-none" role="tablist" aria-label="Fotos do produto">
-              {photos.map((src, i) => (
+              {views.map((v, i) => (
                 <button
-                  key={src}
+                  key={i}
                   role="tab"
                   aria-selected={i === photo}
-                  aria-label={`Ver foto ${i + 1}`}
-                  onClick={() => setPhoto(i)}
-                  className={`size-16 shrink-0 overflow-hidden rounded-xl ring-2 transition-[box-shadow,opacity] duration-300 ${i === photo ? "ring-rose" : "opacity-60 ring-transparent hover:opacity-100"}`}
+                  aria-label={`Ver ${v.label}`}
+                  onClick={() => setPhotoDir([i, i > photo ? 1 : -1])}
+                  className={`relative h-20 w-16 shrink-0 overflow-hidden rounded-xl ring-2 transition-[box-shadow,opacity] duration-300 ${i === photo ? "ring-rose" : "opacity-60 ring-transparent hover:opacity-100"}`}
                 >
-                  <img src={imageSrc(src)} alt="" className="size-full object-cover" />
+                  <ViewImage view={v} alt="" />
                 </button>
               ))}
             </div>
@@ -231,22 +275,65 @@ function Body({ p, list, inBag, onAdd, onOpen, onClose }: {
         </div>
       </div>
 
-      {related.length > 0 && (
-        <div className="border-t border-border p-6 md:p-8">
-          <p className="font-display text-2xl">Combina com você</p>
-          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-            {related.map((r) => (
-              <button key={r.id} onClick={() => onOpen(r.id)} className="group text-left">
-                <div className="aspect-[3/4] overflow-hidden rounded-2xl bg-muted">
-                  <img src={imageSrc(r.image)} alt="" loading="lazy" className="size-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-105" />
-                </div>
-                <p className="mt-2 truncate text-sm">{r.name}</p>
-                <p className="text-sm font-medium tabular-nums">{brl(r.price)}</p>
-              </button>
-            ))}
-          </div>
+      {related.length > 0 && <Related items={related} list={list} onOpen={onOpen} />}
+    </div>
+  );
+}
+
+// Carrossel "Combina com você": rolagem com encaixe, setas no computador, arrastar no celular.
+function Related({ items, list, onOpen }: { items: Product[]; list: Product[]; onOpen: (id: string) => void }) {
+  const track = useRef<HTMLDivElement>(null);
+  const [edge, setEdge] = useState({ start: true, end: false });
+  const update = () => {
+    const t = track.current;
+    if (t) setEdge({ start: t.scrollLeft < 8, end: t.scrollLeft + t.clientWidth > t.scrollWidth - 8 });
+  };
+  useEffect(update, [items.length]);
+  const scroll = (d: number) => track.current?.scrollBy({ left: d * track.current.clientWidth * 0.8, behavior: "smooth" });
+
+  return (
+    <div className="border-t border-border py-6 md:py-8">
+      <div className="flex items-end justify-between gap-4 px-6 md:px-8">
+        <div>
+          <p className="font-display text-3xl">Combina com você</p>
+          <p className="text-sm text-muted-foreground">Mais peças para completar o look.</p>
         </div>
-      )}
+        <div className="hidden gap-2 sm:flex">
+          <button onClick={() => scroll(-1)} disabled={edge.start} aria-label="Ver peças anteriores" className="btn btn-fill grid size-11 place-items-center rounded-full"><ChevronLeft className="size-5" /></button>
+          <button onClick={() => scroll(1)} disabled={edge.end} aria-label="Ver mais peças" className="btn btn-fill grid size-11 place-items-center rounded-full"><ChevronRight className="size-5" /></button>
+        </div>
+      </div>
+      <div ref={track} onScroll={update} className="mt-5 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-6 px-6 pb-2 scrollbar-none md:scroll-px-8 md:px-8">
+        {items.map((r) => {
+          const out = totalStock(r) === 0;
+          const swatches = colorsOf(r, list);
+          return (
+            <button key={r.id} onClick={() => onOpen(r.id)} className="group w-[44%] shrink-0 snap-start text-left sm:w-[30%] lg:w-[22%]">
+              <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-muted transition-[translate,box-shadow] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:-translate-y-1 group-hover:shadow-[var(--shadow-rose)]">
+                <img
+                  src={imageSrc(r.image)}
+                  alt=""
+                  loading="lazy"
+                  style={{ objectPosition: focusPos(r) }}
+                  className={`size-full object-cover ${out ? "opacity-60 grayscale" : ""}`}
+                />
+                <span className="glass absolute inset-x-2 bottom-2 translate-y-2 rounded-full py-1.5 text-center text-xs font-medium opacity-0 transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:translate-y-0 group-hover:opacity-100">
+                  Ver peça
+                </span>
+              </div>
+              <p className="mt-3 line-clamp-1 text-sm font-medium">{r.name}</p>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <p className="text-sm tabular-nums">{out ? <span className="text-rose">Esgotado</span> : brl(r.price)}</p>
+                {swatches.length > 1 && (
+                  <span className="flex -space-x-1" aria-label={`${swatches.length} cores`}>
+                    {swatches.map((c) => <span key={c.id} className="size-3.5 rounded-full ring-2 ring-background" style={{ background: c.colorHex ?? "#ccc" }} />)}
+                  </span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

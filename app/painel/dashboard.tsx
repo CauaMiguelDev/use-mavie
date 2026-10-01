@@ -9,6 +9,7 @@ import {
 import { Toaster, toast } from "sonner";
 import { BASE } from "../products";
 import { AdminProvider, exportBackup, readBackup, useAdmin } from "./admin-store";
+import { lockPanel } from "./lock";
 import { ease } from "./ui";
 import Overview from "./sections/overview";
 import Products from "./sections/products";
@@ -170,18 +171,16 @@ function AccountBox({ inline }: { inline?: boolean }) {
           </p>
         </div>
       )}
-      <div className={`mt-3 grid gap-2 ${local ? "grid-cols-2" : "grid-cols-3"}`}>
+      <div className="mt-3 grid grid-cols-3 gap-2">
         <button onClick={() => exportBackup(state)} className="btn btn-fill flex h-9 items-center justify-center gap-1.5 rounded-full px-2 text-xs">
           <DatabaseBackup className="size-3.5" strokeWidth={1.5} /> Backup
         </button>
         <button onClick={() => file.current?.click()} className="btn btn-fill flex h-9 items-center justify-center gap-1.5 rounded-full px-2 text-xs">
           <FileUp className="size-3.5" strokeWidth={1.5} /> Restaurar
         </button>
-        {!local && (
-          <button onClick={signOut} className="btn btn-fill flex h-9 items-center justify-center gap-1.5 rounded-full px-2 text-xs">
-            <LogOut className="size-3.5" strokeWidth={1.5} /> Sair
-          </button>
-        )}
+        <button onClick={local ? lockPanel : signOut} className="btn btn-fill flex h-9 items-center justify-center gap-1.5 rounded-full px-2 text-xs">
+          <LogOut className="size-3.5" strokeWidth={1.5} /> {local ? "Bloquear" : "Sair"}
+        </button>
       </div>
       <input ref={file} type="file" accept="application/json" className="hidden" onChange={(e) => { load(e.target.files?.[0]); e.target.value = ""; }} />
     </div>

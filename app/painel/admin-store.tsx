@@ -10,6 +10,8 @@ import { catalog as published, type Catalog } from "../products";
 import { supabase, supabaseReady } from "../supabase";
 import { appendLog, initialState, uid, type AdminState } from "./admin-logic";
 import { Field, inputCls } from "./ui";
+import { PasswordGate, useAttemptLimit } from "./lock";
+import { formatWait } from "./lock-logic";
 
 type Ctx = {
   state: AdminState;
@@ -53,7 +55,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     return () => data.subscription.unsubscribe();
   }, []);
 
-  if (!supabaseReady) return <LocalLoaded>{children}</LocalLoaded>;
+  if (!supabaseReady) return <PasswordGate><LocalLoaded>{children}</LocalLoaded></PasswordGate>;
   if (session === undefined) return <Center><Spinner /></Center>;
   if (recovery && session) return <NewPassword onDone={() => setRecovery(false)} />;
   if (!session) return <Login />;
@@ -247,14 +249,20 @@ function Login() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const limit = useAttemptLimit("mavie-login-lock"); // o Supabase também limita no servidor
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (limit.wait) return;
     setBusy(true);
     setError("");
     const { error } = await supabase().auth.signInWithPassword({ email: email.trim(), password });
     setBusy(false);
-    if (error) setError(error.message.includes("Invalid login") ? "E-mail ou senha incorretos." : "Não consegui entrar. Tente de novo.");
+    if (!error) return limit.success();
+    if (error.message.includes("Invalid login")) {
+      limit.fail();
+      setError(limit.left - 1 > 0 ? `E-mail ou senha incorretos. Restam ${limit.left - 1} tentativas.` : "E-mail ou senha incorretos.");
+    } else setError("Não consegui entrar. Tente de novo.");
   }
 
   async function forgot() {
@@ -277,7 +285,12 @@ function Login() {
         <Field label="Senha" htmlFor="login-pass" error={error}>
           <input id="login-pass" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} aria-invalid={!!error} className={inputCls} />
         </Field>
-        <button disabled={busy || !email || !password} className="btn btn-primary btn-shine flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-medium">
+        {limit.wait > 0 && (
+          <p role="alert" className="rounded-2xl bg-[#fde2e2] p-3 text-center text-sm text-[#a1262b]">
+            Muitas tentativas erradas. Tente de novo em <strong className="tabular-nums">{formatWait(limit.wait)}</strong>.
+          </p>
+        )}
+        <button disabled={busy || !email || !password || limit.wait > 0} className="btn btn-primary btn-shine flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-medium">
           {busy && <Loader2 className="size-4 animate-spin" />} Entrar
         </button>
         <button type="button" onClick={forgot} className="mx-auto block text-sm text-muted-foreground hover:text-rose">Esqueci a senha</button>

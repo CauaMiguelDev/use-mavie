@@ -5,15 +5,16 @@
 import { useEffect, useRef, useState } from "react";
 import Lenis from "lenis";
 import { AnimatePresence, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
-import { ArrowRight, ArrowUp, Camera, Check, Menu, Minus, Plus, ShoppingBag, Truck, MessageCircle, Shirt, X, Ban, Tag, Package, Link2, MapPin, Sparkle } from "lucide-react";
+import { ArrowRight, ArrowUp, Camera, Check, LockKeyhole, Menu, Minus, Plus, ShoppingBag, Truck, MessageCircle, Shirt, X, Ban, Tag, Package, Link2, MapPin, Sparkle } from "lucide-react";
 import { Toaster, toast } from "sonner";
-import { BASE, WHATSAPP, img, brl, formatPhone, imageSrc, orderMessage, sizesOf, totalStock, whatsappUrl, INSTAGRAM, type BagItem, type Product } from "./products";
-
+import { BASE, WHATSAPP, catalog, focusPos, img, brl, formatPhone, imageSrc, orderMessage, sizesOf, totalStock, whatsappUrl, INSTAGRAM, type BagItem, type Product } from "./products";
 import { useLiveCatalog } from "./supabase";
 import { ProductView } from "./product-view";
-import { Magnetic, RevealText, ScrollProgress, SilkBackground, Sparkles, Tilt, VelocityMarquee, useButtonSpotlight } from "./fx";
+import { Parallax, RevealText, ScrollProgress, SilkBackground, Sparkles, VelocityMarquee } from "./fx";
 
 const ease = [0.16, 1, 0.3, 1] as const;
+// Enquadramento das fotos fixas (hero, looks): usa o ponto do rosto do catálogo.
+const posOf = (id: string) => focusPos(catalog.products.find((p) => p.id === id) ?? {});
 const heroLooks = ["longo-fenda-preto", "recorte-azul", "midi-vinho", "costas-nuas-preto"];
 const sections = [
   { id: "catalogo", label: "Catálogo" },
@@ -29,8 +30,6 @@ export default function Store() {
   const visible = list.filter((p) => !p.hidden);
   const [bag, setBag] = useState<BagItem[]>([]);
   const [open, setOpen] = useState(false);
-
-  useButtonSpotlight();
 
   // Rolagem suave (desligada com movimento reduzido).
   useEffect(() => {
@@ -251,14 +250,7 @@ function Hero() {
   const ySmall = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : -160]);
   const textY = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : -80]);
   const textOpacity = useTransform(scrollYProgress, [0, 0.7], [1, reduce ? 1 : 0]);
-  const mouse = useMotionValue({ x: 0.7, y: 0.4 });
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const springy = { stiffness: 60, damping: 20 };
-  const rotY = useSpring(useTransform(mx, [-0.5, 0.5], [-6, 6]), springy);
-  const rotX = useSpring(useTransform(my, [-0.5, 0.5], [5, -5]), springy);
-  const shiftX = useSpring(useTransform(mx, [-0.5, 0.5], [-20, 20]), springy);
-  const shiftY = useSpring(useTransform(my, [-0.5, 0.5], [-14, 14]), springy);
+  const glow = useMotionValue({ x: 0.72, y: 0.38 }); // brilho fixo do fundo (não segue o cursor)
   const [look, setLook] = useState(0);
 
   useEffect(() => {
@@ -272,18 +264,8 @@ function Hero() {
       id="topo"
       ref={ref}
       className="relative overflow-hidden"
-      onPointerMove={(e) => {
-        if (reduce || e.pointerType !== "mouse") return;
-        const r = ref.current!.getBoundingClientRect();
-        const x = (e.clientX - r.left) / r.width;
-        const y = (e.clientY - r.top) / r.height;
-        mouse.set({ x, y });
-        mx.set(x - 0.5);
-        my.set(y - 0.5);
-      }}
-      onPointerLeave={() => { mx.set(0); my.set(0); }}
     >
-      <SilkBackground mouse={mouse} />
+      <SilkBackground mouse={glow} />
       <div className="relative mx-auto grid min-h-[100dvh] max-w-7xl items-center gap-10 px-4 pb-12 pt-28 md:px-8 lg:grid-cols-[1.05fr_1fr] lg:pb-8 lg:pt-24">
         <motion.div style={{ y: textY, opacity: textOpacity }} className="relative z-10">
           <motion.p
@@ -337,7 +319,6 @@ function Hero() {
             transition={{ duration: 1, delay: 0.95, ease }}
             className="mt-9 flex flex-wrap gap-3"
           >
-            <Magnetic>
               <a href="#catalogo" className="btn btn-primary btn-shine group inline-flex items-center gap-2 rounded-full px-7 py-4 text-sm font-medium">
                 Ver catálogo
                 <span className="icon-swap" aria-hidden>
@@ -345,18 +326,14 @@ function Hero() {
                   <ArrowRight className="size-4" strokeWidth={1.5} />
                 </span>
               </a>
-            </Magnetic>
-            <Magnetic>
               <a href={INSTAGRAM} target="_blank" rel="noreferrer" className="btn btn-fill glass inline-flex items-center gap-2 rounded-full px-7 py-4 text-sm">
                 <Camera className="size-4" strokeWidth={1.5} /> @usemaviie_
               </a>
-            </Magnetic>
           </motion.div>
         </motion.div>
 
         {/* Colagem: inclina com o cursor; parallax na rolagem; looks em sequência */}
         <motion.div
-          style={reduce ? undefined : { rotateX: rotX, rotateY: rotY, transformPerspective: 1400 }}
           className="relative mx-auto h-[60vh] w-full max-w-[520px] lg:h-[76vh]"
         >
           <motion.div
@@ -371,6 +348,7 @@ function Hero() {
                 key={heroLooks[look]}
                 src={img(heroLooks[look])}
                 alt="Look da coleção USE MAVIÊ"
+                style={{ objectPosition: posOf(heroLooks[look]) }}
                 className="absolute inset-0 h-full w-full object-cover"
                 initial={reduce ? false : { scale: 1.12, clipPath: "circle(0% at 50% 60%)" }}
                 animate={{ scale: 1, clipPath: "circle(110% at 50% 60%)" }}
@@ -396,7 +374,7 @@ function Hero() {
             </div>
           </motion.div>
           <motion.div style={{ y: ySmall }} className="absolute bottom-[8%] left-0 z-10 w-[40%]">
-            <motion.div style={reduce ? undefined : { x: shiftX, y: shiftY }}>
+            <div>
               <motion.div
                 initial={reduce ? false : { clipPath: "inset(0 100% 0 0 round 1.5rem)" }}
                 animate={{ clipPath: "inset(0 0% 0 0 round 1.5rem)" }}
@@ -406,12 +384,13 @@ function Hero() {
                 <motion.img
                   src={img("babado-marrom")}
                   alt="Vestido babado cacau"
+                  style={{ objectPosition: posOf("babado-marrom") }}
                   className="aspect-[3/4] w-full object-cover"
                   animate={reduce ? undefined : { scale: [1, 1.07, 1] }}
                   transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
                 />
               </motion.div>
-            </motion.div>
+            </div>
           </motion.div>
           <SpinBadge />
           <Sparkles />
@@ -539,21 +518,22 @@ function Catalog({ items, categories: allCategories, onAdd, onOpen }: { items: P
                     }}
                   >
                   <button type="button" onClick={() => onOpen(p.id)} aria-label={`Ver ${p.name}`} className="block w-full cursor-pointer rounded-2xl text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose/40">
-                  <Tilt className="aspect-[3/4] overflow-hidden rounded-2xl bg-muted">
+                  <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-muted transition-[translate,box-shadow] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:-translate-y-1.5 group-hover:shadow-[var(--shadow-rose)]">
                     <img
                       src={imageSrc(p.image)}
                       alt={p.name}
                       loading="lazy"
-                      className={`h-full w-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-[1.06] ${soldOut ? "opacity-50 grayscale" : ""}`}
+                      style={{ objectPosition: focusPos(p) }}
+                      className={`h-full w-full object-cover ${soldOut ? "opacity-50 grayscale" : ""}`}
                     />
                     <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/5" />
                     <span className="glass pointer-events-none absolute inset-x-3 bottom-3 translate-y-2 rounded-full py-2 text-center text-xs font-medium opacity-0 transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:translate-y-0 group-hover:opacity-100">
                       Ver detalhes{(p.gallery?.length ?? 0) > 0 ? ` e ${p.gallery!.length + 1} fotos` : ""}
                     </span>
-                  </Tilt>
+                  </div>
                   </button>
                   </motion.div>
-                  <div className="mt-4 flex items-start justify-between gap-2">
+                  <div className="mt-4 flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
                     <h3 className="text-sm font-medium leading-snug">
                       <button type="button" onClick={() => onOpen(p.id)} className="text-left transition-colors duration-300 hover:text-rose">{p.name}</button>
                     </h3>
@@ -602,29 +582,40 @@ function Catalog({ items, categories: allCategories, onAdd, onOpen }: { items: P
   );
 }
 
-// ---------- Looks (bento) ----------
-function Lookbook() {
-  const reduce = useReducedMotion();
-  const tiles = ["longo-azul", "um-ombro-preto", "body-renda-branco", "conjunto-longo-preto", "longo-vinho"];
+// ---------- Looks: três colunas em velocidades diferentes (parallax nas caixas, fotos paradas) ----------
+const lookColumns = [
+  { speed: 24, ids: ["longo-azul", "body-renda-branco"] },
+  { speed: 90, ids: ["um-ombro-preto", "conjunto-longo-preto"] },
+  { speed: 50, ids: ["longo-vinho", "conjunto-recorte-preto"] },
+];
+
+function LookCard({ id }: { id: string }) {
   return (
-    <section id="looks" className="relative overflow-hidden py-24 md:py-32">
+    <a
+      href="#catalogo"
+      className="group block overflow-hidden rounded-3xl bg-muted transition-[translate,box-shadow] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1.5 hover:shadow-[var(--shadow-rose)]"
+    >
+      <img src={img(id)} alt="Look da USE MAVIÊ" loading="lazy" style={{ objectPosition: posOf(id) }} className="aspect-[3/4] w-full object-cover" />
+    </a>
+  );
+}
+
+function Lookbook() {
+  return (
+    <section id="looks" className="relative overflow-hidden py-24 md:py-36">
       <div aria-hidden className="bg-grad-soft absolute inset-x-4 inset-y-0 rounded-[3rem] md:inset-x-8" />
-      <div className="relative mx-auto max-w-7xl px-8 md:px-14">
+      <div className="relative mx-auto max-w-7xl px-6 md:px-14">
         <RevealText text="Seu look favorito" accent="está aqui." className="max-w-2xl font-display text-5xl font-medium leading-[1.1] tracking-tight md:text-7xl" />
-        <div className="mt-12 grid auto-rows-[200px] grid-cols-2 gap-3 md:auto-rows-[250px] md:grid-cols-4 md:gap-4">
-          {tiles.map((id, i) => (
-            <motion.a
-              key={id}
-              href="#catalogo"
-              initial={reduce ? false : { opacity: 0, clipPath: "inset(14% 14% 14% 14% round 1.5rem)" }}
-              whileInView={{ opacity: 1, clipPath: "inset(0% 0% 0% 0% round 1.5rem)" }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 1.1, delay: i * 0.08, ease }}
-              className={`group relative overflow-hidden rounded-3xl ${i === 0 ? "col-span-2 row-span-2" : ""}`}
+        {/* No celular: 2 colunas (a terceira vira uma linha de 2). Caixas 3:4 como as fotos. */}
+        <div className="mt-12 grid grid-cols-2 items-start gap-3 md:mt-16 md:grid-cols-3 md:gap-5">
+          {lookColumns.map((col, i) => (
+            <Parallax
+              key={i}
+              speed={col.speed}
+              className={`grid gap-3 md:gap-5 ${i === 1 ? "mt-10 md:mt-24" : ""} ${i === 2 ? "col-span-2 grid-cols-2 md:col-span-1 md:mt-10 md:grid-cols-1" : ""}`}
             >
-              <img src={img(id)} alt="Look da USE MAVIÊ" loading="lazy" className="h-full w-full object-cover transition-transform duration-[1400ms] ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-105" />
-              <div className="bg-grad absolute inset-0 opacity-0 mix-blend-soft-light transition-opacity duration-700 group-hover:opacity-60" />
-            </motion.a>
+              {col.ids.map((id) => <LookCard key={id} id={id} />)}
+            </Parallax>
           ))}
         </div>
       </div>
@@ -635,9 +626,6 @@ function Lookbook() {
 // ---------- A loja ----------
 function About() {
   const reduce = useReducedMotion();
-  const imgRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: imgRef, offset: ["start end", "end start"] });
-  const imgY = useTransform(scrollYProgress, [0, 1], reduce ? ["0%", "0%"] : ["-6%", "6%"]);
   const steps = [
     { icon: Shirt, t: "Escolha peças e tamanhos", d: "Monte sua sacola direto no catálogo." },
     { icon: MessageCircle, t: "Envie pelo WhatsApp", d: "A sacola vira uma mensagem pronta com o seu pedido." },
@@ -645,17 +633,15 @@ function About() {
   ];
   return (
     <section id="loja" className="mx-auto grid max-w-7xl items-center gap-12 overflow-x-clip px-4 py-24 md:px-8 md:py-32 lg:grid-cols-2">
-      <motion.div
-        initial={reduce ? false : { opacity: 0, clipPath: "inset(10% 10% 10% 10% round 2rem)" }}
-        whileInView={{ opacity: 1, clipPath: "inset(0% 0% 0% 0% round 2rem)" }}
-        viewport={{ once: true, amount: 0.3 }}
-        transition={{ duration: 1.2, ease }}
-        className="relative"
-      >
-        <div ref={imgRef} className="aspect-[4/5] overflow-hidden rounded-[2rem]">
-          <motion.img style={{ y: imgY, scale: 1.14 }} src={img("decote-v-preto")} alt="Modelo com vestido longo preto de decote V da USE MAVIÊ" loading="lazy" className="size-full object-cover" />
-        </div>
-      </motion.div>
+      <Parallax speed={60}>
+        <img
+          src={img("decote-v-preto")}
+          alt="Modelo com vestido longo preto de decote V da USE MAVIÊ"
+          loading="lazy"
+          style={{ objectPosition: posOf("decote-v-preto") }}
+          className="aspect-[4/5] w-full rounded-[2rem] object-cover shadow-[0_40px_80px_-40px_color-mix(in_oklab,var(--plum)_55%,transparent)]"
+        />
+      </Parallax>
       <div>
         <RevealText text="Loja on-line," accent="atendimento de perto." className="font-display text-5xl font-medium leading-[1.1] tracking-tight md:text-6xl" />
         <p className="mt-5 max-w-[55ch] text-muted-foreground">Você escolhe pelo site e fala com gente de verdade: cada pedido é confirmado pela nossa equipe, do tamanho à entrega.</p>
@@ -732,11 +718,9 @@ function Footer({ whatsapp }: { whatsapp: string }) {
               <RevealText text="Siga a" accent="Maviê" className="font-display text-5xl font-medium leading-[1.05] tracking-tight md:text-7xl" />
               <p className="mt-3 max-w-md text-muted-foreground">Looks novos, provas e peças disponíveis aparecem primeiro no Instagram.</p>
             </div>
-            <Magnetic>
               <a href={INSTAGRAM} target="_blank" rel="noreferrer" className="btn btn-primary btn-shine inline-flex items-center gap-2 rounded-full px-7 py-4 text-sm font-medium">
                 <Camera className="size-4" strokeWidth={1.5} /> @usemaviie_
               </a>
-            </Magnetic>
           </div>
 
           <div className="mt-16 grid gap-10 border-t border-foreground/10 pt-10 sm:grid-cols-3">
@@ -784,7 +768,10 @@ function Footer({ whatsapp }: { whatsapp: string }) {
         <div className="relative flex flex-col items-center justify-between gap-3 border-t border-foreground/10 px-6 py-5 text-xs text-muted-foreground md:flex-row md:px-12">
           <p>© 2026 USE MAVIÊ. Versão demonstrativa: preços e estoque sujeitos a confirmação.</p>
           <div className="flex items-center gap-4">
-            <a href={`${BASE}/painel`} className="transition-colors duration-300 hover:text-rose">Painel da loja</a>
+            {/* Acesso discreto à área restrita (o painel pede senha). */}
+            <a href={`${BASE}/painel`} aria-label="Área restrita" title="Área restrita" className="grid size-8 place-items-center rounded-full opacity-25 transition-opacity duration-300 hover:opacity-80 focus-visible:opacity-80">
+              <LockKeyhole className="size-3.5" strokeWidth={1.5} />
+            </a>
             <a href="#topo" className="btn btn-fill grid size-10 place-items-center rounded-full" aria-label="Voltar ao topo">
               <ArrowUp className="size-4" strokeWidth={1.5} />
             </a>
@@ -859,7 +846,7 @@ function Bag({ open, items, list, whatsapp, onClose, onChange }: {
                           exit={{ opacity: 0, x: 40, transition: { duration: 0.2 } }}
                           className="box flex gap-4 p-3"
                         >
-                          <img src={imageSrc(p.image)} alt="" className="h-24 w-[4.5rem] shrink-0 rounded-xl object-cover" />
+                          <img src={imageSrc(p.image)} alt="" style={{ objectPosition: focusPos(p) }} className="h-24 w-[4.5rem] shrink-0 rounded-xl object-cover" />
                           <div className="flex flex-1 flex-col">
                             <p className="text-sm font-medium">{p.name}</p>
                             <p className="text-xs text-muted-foreground">Tamanho {it.size}</p>
@@ -915,7 +902,6 @@ function WhatsAppFab({ number, hidden }: { number: string; hidden: boolean }) {
           transition={{ duration: 0.6, delay: 1.4, ease }}
           className="fixed bottom-5 right-5 z-40 md:bottom-7 md:right-7"
         >
-          <Magnetic>
             <a
               href={whatsappUrl("Oi, Maviê! Vim pelo site e quero tirar uma dúvida.", number)}
               target="_blank"
@@ -926,7 +912,6 @@ function WhatsAppFab({ number, hidden }: { number: string; hidden: boolean }) {
               <MessageCircle className="size-5" strokeWidth={1.5} />
               <span className="hidden sm:inline">Fale com a gente</span>
             </a>
-          </Magnetic>
         </motion.div>
       )}
     </AnimatePresence>
