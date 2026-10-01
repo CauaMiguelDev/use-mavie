@@ -24,15 +24,6 @@ rmSync(join(out, repo), { recursive: true, force: true });
 rmSync(join(out, ".vite"), { recursive: true, force: true });
 writeFileSync(join(out, ".nojekyll"), "");
 
-// Mantém o catálogo publicado pelo painel (preços, estoque, WhatsApp) ao republicar o site.
-try {
-  execSync("git fetch -q origin gh-pages", { stdio: "ignore" });
-  writeFileSync(join(out, "catalog.json"), execSync("git show origin/gh-pages:catalog.json"));
-  console.log("catalog.json do painel preservado.");
-} catch {
-  console.log("Sem catalog.json publicado ainda; usando os valores de products.ts.");
-}
-
 const git = `git -c user.name=deploy -c user.email=deploy@users.noreply.github.com`;
 run("git init -q -b gh-pages", { cwd: out });
 run("git add -A", { cwd: out });

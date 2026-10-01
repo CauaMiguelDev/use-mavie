@@ -2,7 +2,7 @@
 
 // Efeitos reutilizáveis. Tudo via motion values (sem re-render) e desligado com prefers-reduced-motion.
 import { useEffect, useRef, type ReactNode } from "react";
-import { type MotionValue, motion, useMotionTemplate, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
+import { type MotionValue, motion, useAnimationFrame, useMotionTemplate, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform, useVelocity } from "motion/react";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 const soft = { stiffness: 120, damping: 18, mass: 0.6 };
@@ -225,5 +225,52 @@ export function Sparkles() {
         </motion.span>
       ))}
     </>
+  );
+}
+
+// Um único listener para todos os botões: guarda a posição do cursor em --mx/--my (holofote no CSS).
+export function useButtonSpotlight() {
+  useEffect(() => {
+    if (!matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    const move = (e: PointerEvent) => {
+      const b = (e.target as Element | null)?.closest?.(".btn") as HTMLElement | null;
+      if (!b) return;
+      const r = b.getBoundingClientRect();
+      b.style.setProperty("--mx", `${e.clientX - r.left}px`);
+      b.style.setProperty("--my", `${e.clientY - r.top}px`);
+    };
+    document.addEventListener("pointermove", move, { passive: true });
+    return () => document.removeEventListener("pointermove", move);
+  }, []);
+}
+
+// Faixa que desliza sozinha e acelera conforme a velocidade da rolagem (desacelera com mola).
+export function VelocityMarquee({ children, baseSpeed = 2.2 }: { children: ReactNode; baseSpeed?: number }) {
+  const reduce = useReducedMotion();
+  const x = useMotionValue(0);
+  const { scrollY } = useScroll();
+  const velocity = useSpring(useVelocity(scrollY), { damping: 50, stiffness: 300 });
+  const boost = useTransform(velocity, [-2000, 0, 2000], [-4, 0, 4], { clamp: false });
+  const dir = useRef(1);
+  const track = useRef<HTMLDivElement>(null);
+
+  useAnimationFrame((_, delta) => {
+    if (reduce || !track.current) return;
+    const b = boost.get();
+    if (b < 0) dir.current = -1;
+    else if (b > 0) dir.current = 1;
+    const half = track.current.scrollWidth / 2;
+    let next = x.get() - dir.current * baseSpeed * (delta / 16) * (1 + Math.abs(b));
+    // volta ao início sem salto: a faixa tem o conteúdo duplicado
+    if (next <= -half) next += half;
+    if (next > 0) next -= half;
+    x.set(next);
+  });
+
+  return (
+    <motion.div ref={track} style={{ x }} className="flex w-max">
+      {children}
+      {children}
+    </motion.div>
   );
 }

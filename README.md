@@ -12,30 +12,30 @@ Loja on-line de moda feminina de Brasília. Divas usam Maviê.
 - Catálogo com filtros por categoria, tamanhos e aviso de estoque
 - Sacola que monta o pedido e envia pelo WhatsApp
 - Looks, como comprar e política de troca
-- Painel com indicadores, gráficos, alertas de estoque e edição de preço, estoque, visibilidade e WhatsApp, publicando direto no site
+- Painel com pedidos, pagamentos, vendas, produtos, estoque por tamanho e categorias, ligado à loja em tempo real
 
 ## Antes de usar de verdade
 
-- Preços e estoque são exemplos. Ajuste em `app/products.ts`.
-- O número do WhatsApp pode ser definido no painel (recomendado) ou em `app/products.ts` (`WHATSAPP`).
+- Preços e estoque iniciais são exemplos. Ajuste pelo painel.
+- O número do WhatsApp fica em `app/products.ts` (`WHATSAPP`).
 
-## Como usar o painel
+## Painel e banco de dados (Supabase)
 
-1. Abra https://cauamigueldev.github.io/use-mavie/painel
-2. Edite preços, estoque, o que aparece na loja e o WhatsApp. As mudanças ficam como rascunho só no seu navegador, para conferir antes.
-3. Clique em **Publicar**. Em cerca de 1 minuto todas as clientes veem a loja atualizada.
+A loja e o painel usam o mesmo banco (Supabase). Quando um pedido é registrado no painel, o estoque cai na hora para todas as clientes; ao chegar a zero, a peça aparece como esgotada. Entradas de estoque, preços, produtos novos e categorias também aparecem na loja em segundos.
 
-Para publicar, o painel pede um **token do GitHub** uma única vez por navegador. Qualquer pessoa pode abrir o painel, mas só quem tem o token consegue publicar.
+- Painel: https://cauamigueldev.github.io/use-mavie/painel (login com e-mail e senha)
+- Seções: Visão geral, Pedidos, Pagamentos, Vendas, Produtos (com foto por arrastar e soltar), Estoque por tamanho e Categorias.
 
-**Criar o token (dono do repositório):**
+### Configuração (uma vez)
 
-1. Acesse https://github.com/settings/personal-access-tokens/new
-2. Nome: `Painel USE MAVIÊ`. Validade: a que preferir.
-3. Repository access: **Only select repositories** e escolha `use-mavie`.
-4. Permissions: **Contents: Read and write**.
-5. Gere o token e envie para quem administra a loja por um canal privado. Ele aparece só uma vez.
+1. Crie um projeto em https://supabase.com (plano gratuito).
+2. Em **SQL Editor**, cole `supabase/setup.sql`, troque o e-mail na última linha pelo e-mail de quem administra e clique em **Run**.
+3. Em **Authentication > Users**, crie o usuário com esse e-mail e uma senha.
+4. Em **Authentication > Sign In / Providers**, desligue **Allow new users to sign up**.
+5. Em **Authentication > URL Configuration**, coloque `https://cauamigueldev.github.io/use-mavie/painel` em Site URL (para o link de "Esqueci a senha").
+6. Em **Project Settings > API**, copie a **Project URL** e a chave **anon public** e coloque em `app/supabase.ts`.
 
-Se o token vazar ou a pessoa sair da loja, apague o token em https://github.com/settings/personal-access-tokens e crie outro.
+A chave anon é pública por natureza; quem protege os dados são as regras de segurança do `setup.sql`: só e-mails da tabela `admins` alteram dados, e pedidos e telefones de clientes nunca ficam públicos.
 
 ## Rodar localmente
 
@@ -56,6 +56,6 @@ O site é publicado na branch `gh-pages`, que o GitHub Pages serve. Para publica
 npm run deploy
 ```
 
-O script gera o site estático (`scripts/deploy-pages.mjs`) e envia para a branch `gh-pages`, mantendo o `catalog.json` publicado pelo painel. O site atualiza em cerca de um minuto.
+O script gera o site estático (`scripts/deploy-pages.mjs`) e envia para a branch `gh-pages`. Só é preciso para mudanças no código ou no visual; produtos e estoque mudam pelo painel.
 
-Feito com Next.js (vinext), Tailwind CSS, Motion, Lenis e Recharts.
+Feito com Next.js (vinext), Tailwind CSS, Motion, Lenis, Recharts e Supabase.

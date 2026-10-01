@@ -1,0 +1,297 @@
+{
+  "categories": [
+    "Vestidos curtos",
+    "Vestidos longos",
+    "Conjuntos",
+    "Tops e bodies"
+  ],
+  "products": [
+    {
+      "id": "longo-fenda-preto",
+      "name": "Vestido Longo Fenda Noir",
+      "category": "Vestidos longos",
+      "price": 189.9,
+      "image": "images/longo-fenda-preto.jpg",
+      "stock": {
+        "P": 1,
+        "M": 2,
+        "G": 1
+      },
+      "hidden": false
+    },
+    {
+      "id": "babado-marrom",
+      "name": "Vestido Babado Cacau",
+      "category": "Vestidos curtos",
+      "price": 149.9,
+      "image": "images/babado-marrom.jpg",
+      "stock": {
+        "P": 1,
+        "M": 1,
+        "G": 1
+      },
+      "hidden": false
+    },
+    {
+      "id": "recorte-azul",
+      "name": "Vestido Recorte Céu",
+      "category": "Vestidos longos",
+      "price": 179.9,
+      "image": "images/recorte-azul.jpg",
+      "stock": {
+        "P": 2,
+        "M": 2,
+        "G": 1
+      },
+      "hidden": false
+    },
+    {
+      "id": "corset-marrom",
+      "name": "Corset Cacau",
+      "category": "Tops e bodies",
+      "price": 119.9,
+      "image": "images/corset-marrom.jpg",
+      "stock": {
+        "P": 1,
+        "M": 1,
+        "G": 0
+      },
+      "hidden": false
+    },
+    {
+      "id": "costas-nuas-preto",
+      "name": "Vestido Costas Nuas",
+      "category": "Vestidos longos",
+      "price": 189.9,
+      "image": "images/costas-nuas-preto.jpg",
+      "stock": {
+        "P": 1,
+        "M": 1,
+        "G": 1
+      },
+      "hidden": false
+    },
+    {
+      "id": "alcinha-preto",
+      "name": "Vestido Alcinha Noir",
+      "category": "Vestidos curtos",
+      "price": 129.9,
+      "image": "images/alcinha-preto.jpg",
+      "stock": {
+        "P": 2,
+        "M": 2,
+        "G": 2
+      },
+      "hidden": false
+    },
+    {
+      "id": "midi-vinho",
+      "name": "Vestido Midi Bordô",
+      "category": "Vestidos longos",
+      "price": 169.9,
+      "image": "images/midi-vinho.jpg",
+      "stock": {
+        "P": 1,
+        "M": 2,
+        "G": 1
+      },
+      "hidden": false
+    },
+    {
+      "id": "conjunto-recorte-preto",
+      "name": "Conjunto Recorte Noir",
+      "category": "Conjuntos",
+      "price": 159.9,
+      "image": "images/conjunto-recorte-preto.jpg",
+      "stock": {
+        "P": 1,
+        "M": 1,
+        "G": 1
+      },
+      "hidden": false
+    },
+    {
+      "id": "body-renda-branco",
+      "name": "Body Renda Pérola",
+      "category": "Tops e bodies",
+      "price": 99.9,
+      "image": "images/body-renda-branco.jpg",
+      "stock": {
+        "P": 2,
+        "M": 2,
+        "G": 1
+      },
+      "hidden": false
+    },
+    {
+      "id": "amarracao-preto",
+      "name": "Vestido Amarração",
+      "category": "Vestidos curtos",
+      "price": 139.9,
+      "image": "images/amarracao-preto.jpg",
+      "stock": {
+        "P": 0,
+        "M": 0,
+        "G": 0
+      },
+      "hidden": false
+    },
+    {
+      "id": "longo-azul",
+      "name": "Vestido Longo Decote Céu",
+      "category": "Vestidos longos",
+      "price": 179.9,
+      "image": "images/longo-azul.jpg",
+      "stock": {
+        "P": 1,
+        "M": 2,
+        "G": 1
+      },
+      "hidden": false
+    },
+    {
+      "id": "drapeado-preto",
+      "name": "Vestido Drapeado Manga Longa",
+      "category": "Vestidos curtos",
+      "price": 149.9,
+      "image": "images/drapeado-preto.jpg",
+      "stock": {
+        "P": 1,
+        "M": 1,
+        "G": 0
+      },
+      "hidden": false
+    },
+    {
+      "id": "conjunto-vinho",
+      "name": "Conjunto Saia Bordô",
+      "category": "Conjuntos",
+      "price": 159.9,
+      "image": "images/conjunto-vinho.jpg",
+      "stock": {
+        "P": 1,
+        "M": 1,
+        "G": 1
+      },
+      "hidden": false
+    },
+    {
+      "id": "um-ombro-preto",
+      "name": "Vestido Um Ombro Fenda",
+      "category": "Vestidos longos",
+      "price": 189.9,
+      "image": "images/um-ombro-preto.jpg",
+      "stock": {
+        "P": 0,
+        "M": 1,
+        "G": 0
+      },
+      "hidden": false
+    },
+    {
+      "id": "alcinha-marrom",
+      "name": "Vestido Alcinha Cacau",
+      "category": "Vestidos curtos",
+      "price": 129.9,
+      "image": "images/alcinha-marrom.jpg",
+      "stock": {
+        "P": 1,
+        "M": 2,
+        "G": 1
+      },
+      "hidden": false
+    },
+    {
+      "id": "decote-v-preto",
+      "name": "Vestido Longo Decote V",
+      "category": "Vestidos longos",
+      "price": 169.9,
+      "image": "images/decote-v-preto.jpg",
+      "stock": {
+        "P": 2,
+        "M": 2,
+        "G": 1
+      },
+      "hidden": false
+    },
+    {
+      "id": "conjunto-longo-preto",
+      "name": "Conjunto Saia Longa Noir",
+      "category": "Conjuntos",
+      "price": 169.9,
+      "image": "images/conjunto-longo-preto.jpg",
+      "stock": {
+        "P": 1,
+        "M": 1,
+        "G": 1
+      },
+      "hidden": false
+    },
+    {
+      "id": "renda-preto",
+      "name": "Vestido Barra de Renda",
+      "category": "Vestidos curtos",
+      "price": 149.9,
+      "image": "images/renda-preto.jpg",
+      "stock": {
+        "P": 1,
+        "M": 2,
+        "G": 1
+      },
+      "hidden": false
+    },
+    {
+      "id": "longo-vinho",
+      "name": "Vestido Longo Bordô",
+      "category": "Vestidos longos",
+      "price": 179.9,
+      "image": "images/longo-vinho.jpg",
+      "stock": {
+        "P": 1,
+        "M": 1,
+        "G": 0
+      },
+      "hidden": false
+    },
+    {
+      "id": "godet-preto",
+      "name": "Vestido Godê Noir",
+      "category": "Vestidos curtos",
+      "price": 129.9,
+      "image": "images/godet-preto.jpg",
+      "stock": {
+        "P": 2,
+        "M": 2,
+        "G": 1
+      },
+      "hidden": false
+    },
+    {
+      "id": "recorte-branco-azul",
+      "name": "Vestido Recorte Bicolor",
+      "category": "Vestidos longos",
+      "price": 179.9,
+      "image": "images/recorte-branco-azul.jpg",
+      "stock": {
+        "P": 1,
+        "M": 1,
+        "G": 1
+      },
+      "hidden": false
+    },
+    {
+      "id": "longo-fenda-marinho",
+      "name": "Vestido Longo Fenda Marinho",
+      "category": "Vestidos longos",
+      "price": 189.9,
+      "image": "images/longo-fenda-marinho.jpg",
+      "stock": {
+        "P": 1,
+        "M": 1,
+        "G": 0
+      },
+      "hidden": false
+    }
+  ],
+  "updatedAt": "2026-10-01T00:00:00.000Z"
+}

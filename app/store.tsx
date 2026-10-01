@@ -7,9 +7,10 @@ import Lenis from "lenis";
 import { AnimatePresence, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
 import { ArrowRight, ArrowUp, Camera, Check, Menu, Minus, Plus, ShoppingBag, Truck, MessageCircle, Shirt, X, Ban, Tag, Package, Link2, MapPin, Sparkle } from "lucide-react";
 import { Toaster, toast } from "sonner";
-import { BASE, img, categories, brl, formatPhone, orderMessage, whatsappUrl, INSTAGRAM, type BagItem, type Category } from "./products";
-import { useCatalog, useSettings, type CatalogItem } from "./use-catalog";
-import { Magnetic, RevealText, ScrollProgress, SilkBackground, Sparkles, Tilt } from "./fx";
+import { BASE, WHATSAPP, img, brl, formatPhone, imageSrc, orderMessage, sizesOf, totalStock, whatsappUrl, INSTAGRAM, type BagItem, type Product } from "./products";
+
+import { useLiveCatalog } from "./supabase";
+import { Magnetic, RevealText, ScrollProgress, SilkBackground, Sparkles, Tilt, VelocityMarquee, useButtonSpotlight } from "./fx";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 const heroLooks = ["longo-fenda-preto", "recorte-azul", "midi-vinho", "costas-nuas-preto"];
@@ -21,11 +22,14 @@ const sections = [
 ];
 
 export default function Store() {
-  const { list } = useCatalog();
-  const { settings } = useSettings();
+  // Estoque e preços ao vivo (Supabase); cai para o catálogo estático se o banco não responder.
+  const cat = useLiveCatalog();
+  const list = cat.products;
   const visible = list.filter((p) => !p.hidden);
   const [bag, setBag] = useState<BagItem[]>([]);
   const [open, setOpen] = useState(false);
+
+  useButtonSpotlight();
 
   // Rolagem suave (desligada com movimento reduzido).
   useEffect(() => {
@@ -44,15 +48,20 @@ export default function Store() {
     try { localStorage.setItem("mavie-bag", JSON.stringify(bag)); } catch {}
   }, [bag]);
 
-  // Itens que saíram do catálogo pelo painel somem da sacola.
-  const bagItems = bag.filter((i) => visible.some((p) => p.id === i.id));
+  // A sacola acompanha o estoque ao vivo: peça que esgotou sai, quantidade acima do estoque é reduzida.
+  const bagItems = bag.flatMap((i) => {
+    const p = visible.find((x) => x.id === i.id);
+    const qty = Math.min(i.qty, p?.stock[i.size] ?? 0);
+    return qty > 0 ? [{ ...i, qty }] : [];
+  });
   const count = bagItems.reduce((n, i) => n + i.qty, 0);
-  const qtyOf = (id: string) => bagItems.filter((i) => i.id === id).reduce((n, i) => n + i.qty, 0);
+  const qtyOf = (id: string, size: string) => bagItems.filter((i) => i.id === id && i.size === size).reduce((n, i) => n + i.qty, 0);
 
   function add(id: string, size: string) {
     const prod = list.find((p) => p.id === id)!;
-    if (qtyOf(id) >= prod.stock) {
-      toast(`Só temos ${prod.stock} ${prod.stock === 1 ? "unidade" : "unidades"} de ${prod.name}.`);
+    const left = prod.stock[size] ?? 0;
+    if (qtyOf(id, size) >= left) {
+      toast(`Só temos ${left} ${left === 1 ? "unidade" : "unidades"} de ${prod.name} no tamanho ${size}.`);
       return false;
     }
     setBag((b) => {
@@ -65,7 +74,7 @@ export default function Store() {
 
   function change(item: BagItem, delta: number) {
     const prod = list.find((p) => p.id === item.id)!;
-    if (delta > 0 && qtyOf(item.id) >= prod.stock) return;
+    if (delta > 0 && qtyOf(item.id, item.size) >= (prod.stock[item.size] ?? 0)) return;
     setBag((b) => b.map((i) => (i.id === item.id && i.size === item.size ? { ...i, qty: i.qty + delta } : i)).filter((i) => i.qty > 0));
   }
 
@@ -76,14 +85,14 @@ export default function Store() {
       <main>
         <Hero />
         <Marquee />
-        <Catalog items={visible} onAdd={add} />
+        <Catalog items={visible} categories={cat.categories} onAdd={add} />
         <Lookbook />
         <About />
         <Exchanges />
       </main>
-      <Footer whatsapp={settings.whatsapp} />
-      <WhatsAppFab number={settings.whatsapp} hidden={open} />
-      <Bag open={open} items={bagItems} list={list} whatsapp={settings.whatsapp} onClose={() => setOpen(false)} onChange={change} />
+      <Footer whatsapp={WHATSAPP} />
+      <WhatsAppFab number={WHATSAPP} hidden={open} />
+      <Bag open={open} items={bagItems} list={list} whatsapp={WHATSAPP} onClose={() => setOpen(false)} onChange={change} />
       <Toaster position="bottom-center" toastOptions={{ className: "glass", style: { borderRadius: 999, fontFamily: "var(--font-sans)" } }} />
     </div>
   );
@@ -289,8 +298,8 @@ function Hero() {
                 <motion.span
                   key={i}
                   aria-hidden
-                  className="text-grad inline-block"
-                  style={{ backgroundSize: "600% 100%", backgroundPosition: `${i * 20}% 50%` }}
+                  className="text-grad letter-shine inline-block"
+                  style={{ backgroundSize: "600% 100%", backgroundPosition: `${i * 20}% 50%`, "--i": i } as React.CSSProperties}
                   initial={reduce ? false : { opacity: 0, y: 36, filter: "blur(10px)" }}
                   animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                   transition={{ duration: 1, delay: 0.45 + i * 0.06, ease }}
@@ -306,7 +315,7 @@ function Hero() {
             transition={{ duration: 1, delay: 0.8, ease }}
             className="mt-6 max-w-md text-lg leading-relaxed text-muted-foreground"
           >
-            Vestidos, conjuntos e bodies para cada noite. Escolha suas peças e finalize o pedido pelo WhatsApp.
+            Peças escolhidas para você ser notada. Monte a sacola e finalize pelo WhatsApp, com entrega em Brasília.
           </motion.p>
           <motion.div
             initial={reduce ? false : { opacity: 0, y: 14 }}
@@ -430,20 +439,23 @@ function Marquee() {
   const row = [...items, ...items];
   return (
     <div className="relative -rotate-1 overflow-hidden border-y border-border bg-grad-soft py-5" aria-hidden>
-      <div className="marquee flex w-max gap-10 whitespace-nowrap font-display text-3xl italic">
-        {[...row, ...row].map((t, i) => (
-          <span key={i} className="flex items-center gap-10">
-            <span className={i % 2 ? "text-grad" : ""}>{t}</span> <span className="text-rose not-italic">✦</span>
-          </span>
-        ))}
-      </div>
+      <VelocityMarquee>
+        <div className="flex gap-10 whitespace-nowrap pr-10 font-display text-3xl italic">
+          {row.map((t, i) => (
+            <span key={i} className="flex items-center gap-10">
+              <span className={i % 2 ? "text-grad" : ""}>{t}</span> <span className="text-rose not-italic">✦</span>
+            </span>
+          ))}
+        </div>
+      </VelocityMarquee>
     </div>
   );
 }
 
 // ---------- Catálogo ----------
-function Catalog({ items, onAdd }: { items: CatalogItem[]; onAdd: (id: string, size: string) => boolean }) {
-  const [filter, setFilter] = useState<Category | "Todas">("Todas");
+function Catalog({ items, categories: allCategories, onAdd }: { items: Product[]; categories: string[]; onAdd: (id: string, size: string) => boolean }) {
+  const [filter, setFilter] = useState<string>("Todas");
+  const categories = allCategories.filter((c) => items.some((p) => p.category === c));
   // Confirmação no próprio botão de tamanho: vira ✓ por um instante.
   const [added, setAdded] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -463,10 +475,10 @@ function Catalog({ items, onAdd }: { items: CatalogItem[]; onAdd: (id: string, s
         <RevealText text="O" accent="catálogo" className="font-display text-6xl font-medium tracking-tight md:text-7xl" />
         <p className="text-sm text-muted-foreground">{list.length} {list.length === 1 ? "peça" : "peças"}</p>
       </div>
-      <p className="mt-3 max-w-[60ch] text-muted-foreground">Escolha o tamanho para colocar a peça na sacola. Confirmamos disponibilidade pelo WhatsApp.</p>
+      <p className="mt-3 max-w-[60ch] text-muted-foreground">Toque no tamanho para levar a peça para a sacola. A gente confirma tudo com você no WhatsApp.</p>
 
       <div className="glass -mx-1 mt-8 inline-flex max-w-full gap-1 overflow-x-auto rounded-full p-1.5 scrollbar-none">
-        {(["Todas", ...categories] as const).map((c) => (
+        {["Todas", ...categories].map((c) => (
           <button
             key={c}
             onClick={() => setFilter(c)}
@@ -488,44 +500,59 @@ function Catalog({ items, onAdd }: { items: CatalogItem[]; onAdd: (id: string, s
         <motion.div layout={!reduce} className="mt-10 grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4">
           <AnimatePresence mode="popLayout">
             {list.map((p, i) => {
-              const soldOut = p.stock === 0;
+              const stock = totalStock(p);
+              const soldOut = stock === 0;
               return (
                 <motion.article
                   key={p.id}
                   layout={!reduce}
-                  initial={reduce ? false : { opacity: 0, y: 28 }}
-                  whileInView={{ opacity: 1, y: 0 }}
+                  // Card e foto animam juntos por variantes (o filho segue o pai).
+                  initial={reduce ? false : "hidden"}
+                  whileInView="show"
                   exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.2 } }}
-                  viewport={{ once: true, amount: 0.2 }}
-                  transition={{ duration: 0.8, delay: (i % 4) * 0.06, ease }}
+                  viewport={{ once: true, amount: 0.15 }}
+                  variants={{
+                    hidden: { opacity: 0, y: 28 },
+                    show: { opacity: 1, y: 0, transition: { duration: 0.8, delay: (i % 4) * 0.06, ease } },
+                  }}
                   className="group"
                 >
+                  <motion.div
+                    // Só zoom suave: a foto nunca fica escondida se a animação não rodar.
+                    variants={{
+                      hidden: { scale: 0.96 },
+                      show: { scale: 1, transition: { duration: 1.1, delay: (i % 4) * 0.06, ease } },
+                    }}
+                  >
                   <Tilt className="aspect-[3/4] overflow-hidden rounded-2xl bg-muted">
                     <img
-                      src={p.image}
+                      src={imageSrc(p.image)}
                       alt={p.name}
                       loading="lazy"
                       className={`h-full w-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-[1.06] ${soldOut ? "opacity-50 grayscale" : ""}`}
                     />
                     <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/5" />
                   </Tilt>
+                  </motion.div>
                   <div className="mt-4 flex items-start justify-between gap-2">
                     <h3 className="text-sm font-medium leading-snug">{p.name}</h3>
                     <span className="shrink-0 text-sm font-medium">{brl(p.price)}</span>
                   </div>
-                  <p className={`mt-0.5 text-xs ${soldOut || p.stock <= 2 ? "text-rose" : "text-muted-foreground"}`}>
-                    {soldOut ? "Esgotado" : p.stock <= 2 ? `Últimas ${p.stock === 1 ? "unidade" : "unidades"}` : p.category}
+                  <p className={`mt-0.5 text-xs ${soldOut || stock <= 2 ? "text-rose" : "text-muted-foreground"}`}>
+                    {soldOut ? "Esgotado" : stock <= 2 ? `Últimas ${stock === 1 ? "unidade" : "unidades"}` : p.category}
                   </p>
                   {!soldOut && (
                     <div className="mt-3 flex gap-1.5" role="group" aria-label={`Tamanhos de ${p.name}`}>
-                      {p.sizes.map((s) => {
+                      {sizesOf(p).map((s) => {
                         const done = added === `${p.id}-${s}`;
+                        const out = (p.stock[s] ?? 0) === 0;
                         return (
                           <button
                             key={s}
                             onClick={() => pick(p.id, s)}
-                            aria-label={`Adicionar ${p.name} tamanho ${s}`}
-                            className={`btn ${done ? "btn-primary" : "btn-fill"} grid h-9 min-w-9 place-items-center overflow-hidden rounded-full px-3 text-xs`}
+                            disabled={out}
+                            aria-label={out ? `${p.name} tamanho ${s} esgotado` : `Adicionar ${p.name} tamanho ${s}`}
+                            className={`btn ${done ? "btn-primary" : "btn-fill"} grid h-9 min-w-9 place-items-center overflow-hidden rounded-full px-3 text-xs ${out ? "line-through" : ""}`}
                           >
                             <AnimatePresence mode="popLayout" initial={false}>
                               <motion.span
@@ -587,10 +614,13 @@ function Lookbook() {
 // ---------- A loja ----------
 function About() {
   const reduce = useReducedMotion();
+  const imgRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: imgRef, offset: ["start end", "end start"] });
+  const imgY = useTransform(scrollYProgress, [0, 1], reduce ? ["0%", "0%"] : ["-6%", "6%"]);
   const steps = [
     { icon: Shirt, t: "Escolha peças e tamanhos", d: "Monte sua sacola direto no catálogo." },
     { icon: MessageCircle, t: "Envie pelo WhatsApp", d: "A sacola vira uma mensagem pronta com o seu pedido." },
-    { icon: Truck, t: "Receba em casa", d: "Combinamos pagamento e entrega em Brasília na conversa." },
+    { icon: Truck, t: "Receba onde estiver", d: "Entregamos em Brasília. Pagamento e entrega combinados na conversa." },
   ];
   return (
     <section id="loja" className="mx-auto grid max-w-7xl items-center gap-12 overflow-x-clip px-4 py-24 md:px-8 md:py-32 lg:grid-cols-2">
@@ -601,11 +631,13 @@ function About() {
         transition={{ duration: 1.2, ease }}
         className="relative"
       >
-        <img src={img("loja")} alt="Ilustração da loja USE MAVIÊ com sacolas da marca" loading="lazy" className="aspect-[4/5] w-full rounded-[2rem] object-cover" />
+        <div ref={imgRef} className="aspect-[4/5] overflow-hidden rounded-[2rem]">
+          <motion.img style={{ y: imgY, scale: 1.14 }} src={img("loja")} alt="Ilustração da loja USE MAVIÊ com sacolas da marca" loading="lazy" className="size-full object-cover" />
+        </div>
       </motion.div>
       <div>
         <RevealText text="Loja on-line," accent="atendimento de perto." className="font-display text-5xl font-medium leading-[1.1] tracking-tight md:text-6xl" />
-        <p className="mt-5 max-w-[55ch] text-muted-foreground">A USE MAVIÊ vende pela internet e entrega em Brasília. Cada pedido é confirmado por uma pessoa da equipe.</p>
+        <p className="mt-5 max-w-[55ch] text-muted-foreground">Você escolhe pelo site e fala com gente de verdade: cada pedido é confirmado pela nossa equipe, do tamanho à entrega.</p>
         <ol className="mt-10 space-y-3">
           {steps.map(({ icon: Icon, t, d }, i) => (
             <motion.li
@@ -644,6 +676,7 @@ function Exchanges() {
   return (
     <section id="trocas" className="mx-auto max-w-7xl px-4 py-24 md:px-8 md:py-32">
       <RevealText text="Política de" accent="troca" className="font-display text-5xl font-medium tracking-tight md:text-7xl" />
+      <p className="mt-3 max-w-[60ch] text-muted-foreground">Antes de comprar, vale conferir. Assim a sua troca acontece sem surpresa.</p>
       <div className="mt-12 grid gap-4 md:grid-cols-6">
         {rules.map(({ icon: Icon, t, cls, hero }, i) => (
           <motion.div
@@ -674,7 +707,10 @@ function Footer({ whatsapp }: { whatsapp: string }) {
         <div aria-hidden className="bg-grad absolute -right-24 -top-24 size-96 rounded-full opacity-30 blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-6 pt-16 md:px-12 md:pt-20">
           <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-            <RevealText text="Siga a" accent="Maviê" className="font-display text-5xl font-medium leading-[1.05] tracking-tight md:text-7xl" />
+            <div>
+              <RevealText text="Siga a" accent="Maviê" className="font-display text-5xl font-medium leading-[1.05] tracking-tight md:text-7xl" />
+              <p className="mt-3 max-w-md text-muted-foreground">Looks novos, provas e peças disponíveis aparecem primeiro no Instagram.</p>
+            </div>
             <Magnetic>
               <a href={INSTAGRAM} target="_blank" rel="noreferrer" className="btn btn-primary btn-shine inline-flex items-center gap-2 rounded-full px-7 py-4 text-sm font-medium">
                 <Camera className="size-4" strokeWidth={1.5} /> @usemaviie_
@@ -740,7 +776,7 @@ function Footer({ whatsapp }: { whatsapp: string }) {
 
 // ---------- Sacola ----------
 function Bag({ open, items, list, whatsapp, onClose, onChange }: {
-  open: boolean; items: BagItem[]; list: CatalogItem[]; whatsapp: string; onClose: () => void; onChange: (i: BagItem, d: number) => void;
+  open: boolean; items: BagItem[]; list: Product[]; whatsapp: string; onClose: () => void; onChange: (i: BagItem, d: number) => void;
 }) {
   const total = items.reduce((n, i) => n + list.find((p) => p.id === i.id)!.price * i.qty, 0);
 
@@ -802,7 +838,7 @@ function Bag({ open, items, list, whatsapp, onClose, onChange }: {
                           exit={{ opacity: 0, x: 40, transition: { duration: 0.2 } }}
                           className="box flex gap-4 p-3"
                         >
-                          <img src={p.image} alt="" className="h-24 w-[4.5rem] shrink-0 rounded-xl object-cover" />
+                          <img src={imageSrc(p.image)} alt="" className="h-24 w-[4.5rem] shrink-0 rounded-xl object-cover" />
                           <div className="flex flex-1 flex-col">
                             <p className="text-sm font-medium">{p.name}</p>
                             <p className="text-xs text-muted-foreground">Tamanho {it.size}</p>

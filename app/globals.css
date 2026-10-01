@@ -3,6 +3,9 @@
 @import "tw-animate-css";
 @import "../vendor/shadcn-tailwind-4.13.0.css";
 
+/* Site só no tema claro: dark: só vale com a classe .dark (nunca aplicada). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @utility scrollbar-thin {
   scrollbar-width: thin;
 }
@@ -20,6 +23,7 @@
 }
 
 :root {
+  color-scheme: light;
   --background: #fbf9fa;
   --foreground: #1c1719;
   --card: #ffffff;
@@ -103,44 +107,6 @@
     "Liberation Mono", "Courier New", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #141012;
-    --rose: #f08fb6;
-    --rose-soft: #3a2230;
-    --foreground: #f4eef1;
-    --card: #1d181b;
-    --card-foreground: #ededed;
-    --popover: #171717;
-    --popover-foreground: #ededed;
-    --primary: #f4eef1;
-    --primary-foreground: #141012;
-    --secondary: #262626;
-    --secondary-foreground: #ededed;
-    --muted: #251f22;
-    --muted-foreground: #b3a7ad;
-    --accent: #262626;
-    --accent-foreground: #ededed;
-    --destructive: #ff6467;
-    --border: #ffffff1f;
-    --input: #ffffff26;
-    --ring: #f08fb6;
-    --chart-1: #8e51ff;
-    --chart-2: #00bc7d;
-    --chart-3: #fe9a00;
-    --chart-4: #ad46ff;
-    --chart-5: #ff2056;
-    --sidebar: #171717;
-    --sidebar-foreground: #ededed;
-    --sidebar-primary: #8e51ff;
-    --sidebar-primary-foreground: #ededed;
-    --sidebar-accent: #262626;
-    --sidebar-accent-foreground: #ededed;
-    --sidebar-border: #ffffff1a;
-    --sidebar-ring: #737373;
-  }
-}
-
 body {
   overflow-x: clip;
   background: var(--background);
@@ -170,16 +136,6 @@ body {
   /* cores do shader de fundo */
   --sh1: #fbf7f8; --sh2: #f5d9e4; --sh3: #f8e4d8; --sh4: #eab9cd;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --plum: #b25a95;
-    --blush: #3a2230;
-    --peach: #3a2a26;
-    --grad: linear-gradient(120deg, #9b4a86, var(--rose) 55%, #f7b6cb);
-    --sh1: #120c10; --sh2: #2a1220; --sh3: #3d1a2e; --sh4: #1d1420;
-  }
-}
-
 .text-grad {
   background: var(--grad);
   -webkit-background-clip: text;
@@ -337,3 +293,32 @@ html.lenis, html.lenis body { height: auto; }
 .chart .recharts-bar-rectangle path { fill: var(--rose); transition: opacity 300ms ease; }
 .chart .recharts-tooltip-cursor { fill: color-mix(in oklab, var(--rose) 10%, transparent); }
 .chart .recharts-surface:focus { outline: none; }
+
+/* Holofote que segue o cursor dentro dos botões (--mx/--my vêm de fx.tsx) */
+.btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(140px circle at var(--mx, 50%) var(--my, 50%), rgb(255 255 255 / 0.32), transparent 65%);
+  opacity: 0;
+  transition: opacity 400ms ease;
+  pointer-events: none;
+}
+.btn-fill::after { background: radial-gradient(140px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklab, var(--rose) 22%, transparent), transparent 65%); }
+@media (hover: hover) and (pointer: fine) {
+  .btn:not(:disabled):hover::after { opacity: 1; }
+}
+
+/* Brilho que percorre as letras de "Maviê." */
+@keyframes letter-shine {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.35) saturate(1.15); }
+}
+.letter-shine { animation: letter-shine 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * 140ms + 1.6s); }
+
+@media (prefers-reduced-motion: reduce) {
+  .letter-shine { animation: none; }
+  .btn::after { transition: none; }
+}
