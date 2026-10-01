@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import Lenis from "lenis";
 import { AnimatePresence, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
-import { ArrowRight, ArrowUp, Camera, Menu, Minus, Plus, ShoppingBag, Truck, MessageCircle, Shirt, X, Ban, Tag, Package, Link2, MapPin, Sparkle } from "lucide-react";
+import { ArrowRight, ArrowUp, Camera, Check, Menu, Minus, Plus, ShoppingBag, Truck, MessageCircle, Shirt, X, Ban, Tag, Package, Link2, MapPin, Sparkle } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { BASE, img, categories, brl, orderMessage, whatsappUrl, INSTAGRAM, type BagItem, type Category } from "./products";
 import { useCatalog, useSettings, type CatalogItem } from "./use-catalog";
@@ -53,13 +53,14 @@ export default function Store() {
     const prod = list.find((p) => p.id === id)!;
     if (qtyOf(id) >= prod.stock) {
       toast(`Só temos ${prod.stock} ${prod.stock === 1 ? "unidade" : "unidades"} de ${prod.name}.`);
-      return;
+      return false;
     }
     setBag((b) => {
       const hit = b.find((i) => i.id === id && i.size === size);
       return hit ? b.map((i) => (i === hit ? { ...i, qty: i.qty + 1 } : i)) : [...b, { id, size, qty: 1 }];
     });
     toast(`${prod.name} (${size}) na sacola`, { action: { label: "Ver sacola", onClick: () => setOpen(true) } });
+    return true;
   }
 
   function change(item: BagItem, delta: number) {
@@ -153,7 +154,9 @@ function Nav({ count, onBag }: { count: number; onBag: () => void }) {
               className="btn btn-dark flex h-10 items-center gap-2 rounded-full pl-4 pr-3 text-sm"
               aria-label={`Abrir sacola, ${count} ${count === 1 ? "peça" : "peças"}`}
             >
-              <ShoppingBag className="size-4" strokeWidth={1.5} />
+              <motion.span key={count} initial={{ scale: 0.75 }} animate={{ scale: 1 }} transition={{ type: "spring", duration: 0.45, bounce: 0.5 }} className="grid">
+                <ShoppingBag className="size-4" strokeWidth={1.5} />
+              </motion.span>
               <span className="hidden sm:inline">Sacola</span>
               <span className="grid size-6 place-items-center overflow-hidden rounded-full bg-grad text-[11px] font-medium text-white">
                 <AnimatePresence mode="popLayout" initial={false}>
@@ -313,7 +316,10 @@ function Hero() {
             <Magnetic>
               <a href="#catalogo" className="btn btn-primary btn-shine group inline-flex items-center gap-2 rounded-full px-7 py-4 text-sm font-medium">
                 Ver catálogo
-                <ArrowRight className="size-4 transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:translate-x-1" strokeWidth={1.5} />
+                <span className="icon-swap" aria-hidden>
+                  <ArrowRight className="size-4" strokeWidth={1.5} />
+                  <ArrowRight className="size-4" strokeWidth={1.5} />
+                </span>
               </a>
             </Magnetic>
             <Magnetic>
@@ -435,8 +441,18 @@ function Marquee() {
 }
 
 // ---------- Catálogo ----------
-function Catalog({ items, onAdd }: { items: CatalogItem[]; onAdd: (id: string, size: string) => void }) {
+function Catalog({ items, onAdd }: { items: CatalogItem[]; onAdd: (id: string, size: string) => boolean }) {
   const [filter, setFilter] = useState<Category | "Todas">("Todas");
+  // Confirmação no próprio botão de tamanho: vira ✓ por um instante.
+  const [added, setAdded] = useState<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  function pick(id: string, size: string) {
+    if (!onAdd(id, size)) return;
+    setAdded(`${id}-${size}`);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setAdded(null), 1400);
+  }
   const reduce = useReducedMotion();
   const list = filter === "Todas" ? items : items.filter((p) => p.category === filter);
 
@@ -501,16 +517,30 @@ function Catalog({ items, onAdd }: { items: CatalogItem[]; onAdd: (id: string, s
                   </p>
                   {!soldOut && (
                     <div className="mt-3 flex gap-1.5" role="group" aria-label={`Tamanhos de ${p.name}`}>
-                      {p.sizes.map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => onAdd(p.id, s)}
-                          aria-label={`Adicionar ${p.name} tamanho ${s}`}
-                          className="btn btn-fill h-9 min-w-9 rounded-full px-3 text-xs"
-                        >
-                          {s}
-                        </button>
-                      ))}
+                      {p.sizes.map((s) => {
+                        const done = added === `${p.id}-${s}`;
+                        return (
+                          <button
+                            key={s}
+                            onClick={() => pick(p.id, s)}
+                            aria-label={`Adicionar ${p.name} tamanho ${s}`}
+                            className={`btn ${done ? "btn-primary" : "btn-fill"} grid h-9 min-w-9 place-items-center overflow-hidden rounded-full px-3 text-xs`}
+                          >
+                            <AnimatePresence mode="popLayout" initial={false}>
+                              <motion.span
+                                key={done ? "ok" : s}
+                                initial={{ y: 12, opacity: 0, filter: "blur(2px)" }}
+                                animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+                                exit={{ y: -12, opacity: 0, filter: "blur(2px)" }}
+                                transition={{ duration: 0.25, ease }}
+                                className="block"
+                              >
+                                {done ? <Check className="size-3.5" strokeWidth={2.5} /> : s}
+                              </motion.span>
+                            </AnimatePresence>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </motion.article>

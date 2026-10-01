@@ -1,25 +1,54 @@
 "use client";
 
 // Painel da loja: indicadores, gráficos, alertas de estoque e editor de preço/estoque/visibilidade.
-// ponytail: dados salvos no navegador (use-catalog). Sem login: não publique como área restrita
-// antes de ligar autenticação + D1.
+// Edições ficam como rascunho no navegador; "Publicar" grava catalog.json no GitHub (token de quem administra).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { animate, AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   AlertTriangle, ArrowLeft, Boxes, CircleSlash, Download, Eye, EyeOff, Minus, Plus, RotateCcw, Search, Shirt, Wallet, MessageCircle, Check, Store,
+  CloudUpload, KeyRound, Loader2, LogOut, ExternalLink,
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { BASE, brl, categories, type Category } from "../products";
 import { useCatalog, useSettings, type CatalogItem } from "../use-catalog";
+import { REPO, checkToken, getToken, publishCatalog, setToken } from "./github";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 const compact = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact" });
 
 export default function Dashboard() {
-  const { list, update, reset } = useCatalog();
+  const { list, update, discard, changes, snapshot, markPublished, publishedAt } = useCatalog();
   const reduce = useReducedMotion();
+  const [token, setTok] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  useEffect(() => setTok(getToken()), []);
+
+  async function publish() {
+    if (!token) {
+      document.getElementById("github")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      toast("Conecte o GitHub para publicar.");
+      return;
+    }
+    setPublishing(true);
+    try {
+      const data = snapshot();
+      await publishCatalog(token, data);
+      markPublished(data);
+      toast.success("Publicado. A loja atualiza em cerca de 1 minuto.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  function discardDraft() {
+    if (!confirm("Descartar as alterações que ainda não foram publicadas?")) return;
+    discard();
+    toast("Alterações descartadas");
+  }
 
   const stats = useMemo(() => {
     const units = list.reduce((n, p) => n + p.stock, 0);
@@ -69,9 +98,10 @@ export default function Dashboard() {
             <a href={`${BASE}/`} className="btn btn-fill flex h-10 items-center gap-2 rounded-full px-4 text-sm">
               <Store className="size-4" strokeWidth={1.5} /> <span className="hidden sm:inline">Ver loja</span>
             </a>
-            <button onClick={exportCatalog} className="btn btn-primary btn-shine flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium">
-              <Download className="size-4" strokeWidth={1.5} /> <span className="hidden sm:inline">Exportar</span>
+            <button onClick={exportCatalog} aria-label="Exportar catálogo (JSON)" title="Exportar catálogo (JSON)" className="btn btn-fill grid size-10 place-items-center rounded-full">
+              <Download className="size-4" strokeWidth={1.5} />
             </button>
+            <PublishButton changes={changes} busy={publishing} onClick={publish} />
           </div>
         </div>
       </header>
@@ -85,9 +115,37 @@ export default function Dashboard() {
             Olá, <span className="text-grad italic">Maviê</span>
           </h1>
           <p className="mt-2 max-w-[60ch] text-muted-foreground">
-            Ajuste preços, estoque e o que aparece na loja. As mudanças valem na hora neste navegador.
+            Ajuste preços, estoque e o que aparece na loja. Confira aqui e publique para todas as clientes verem.
           </p>
         </motion.div>
+
+        <AnimatePresence initial={false}>
+          {changes > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -8, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: "auto" }}
+              exit={{ opacity: 0, y: -8, height: 0 }}
+              transition={{ duration: 0.4, ease }}
+              className="overflow-hidden"
+            >
+              <div className="glass mt-6 flex flex-col gap-3 rounded-3xl p-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="flex items-center gap-3 text-sm">
+                  <span className="bg-grad grid size-9 shrink-0 place-items-center rounded-xl text-white"><CloudUpload className="size-4" strokeWidth={1.5} /></span>
+                  <span>
+                    <strong className="font-medium">{changes} {changes === 1 ? "alteração" : "alterações"} só neste navegador.</strong>{" "}
+                    <span className="text-muted-foreground">Publique para atualizar a loja.</span>
+                  </span>
+                </p>
+                <div className="flex gap-2">
+                  <button onClick={discardDraft} className="btn btn-fill flex h-10 items-center gap-2 rounded-full px-4 text-sm">
+                    <RotateCcw className="size-4" strokeWidth={1.5} /> Descartar
+                  </button>
+                  <PublishButton changes={changes} busy={publishing} onClick={publish} />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Indicadores */}
         <section className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Indicadores">
@@ -139,12 +197,13 @@ export default function Dashboard() {
           </ChartCard>
         </section>
 
-        <section className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.3fr]">
+        <section className="mt-4 grid gap-4 lg:grid-cols-3">
           <Alerts list={list} onRestock={(p) => { update(p.id, { stock: p.stock + 5 }); toast(`${p.name}: +5 unidades`); }} />
           <Settings />
+          <GitHubCard token={token} publishedAt={publishedAt} onToken={setTok} />
         </section>
 
-        <Editor list={list} update={update} reset={reset} />
+        <Editor list={list} update={update} />
       </main>
       <Toaster position="bottom-center" toastOptions={{ className: "glass", style: { borderRadius: 999, fontFamily: "var(--font-sans)" } }} />
     </div>
@@ -266,7 +325,7 @@ function Settings() {
         e.preventDefault();
         if (!valid) return;
         save({ whatsapp: digits });
-        toast(digits ? "WhatsApp salvo" : "WhatsApp removido");
+        toast("WhatsApp alterado. Publique para valer na loja.");
       }}
     >
       <h2 className="text-sm font-medium">WhatsApp dos pedidos</h2>
@@ -301,7 +360,7 @@ function Settings() {
   );
 }
 
-function Editor({ list, update, reset }: { list: CatalogItem[]; update: (id: string, patch: Partial<Pick<CatalogItem, "price" | "stock" | "hidden">>) => void; reset: () => void }) {
+function Editor({ list, update }: { list: CatalogItem[]; update: (id: string, patch: Partial<Pick<CatalogItem, "price" | "stock" | "hidden">>) => void }) {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<Category | "Todas">("Todas");
   const rows = list.filter((p) => (cat === "Todas" || p.category === cat) && p.name.toLowerCase().includes(q.trim().toLowerCase()));
@@ -338,17 +397,6 @@ function Editor({ list, update, reset }: { list: CatalogItem[]; update: (id: str
               {(["Todas", ...categories] as const).map((c) => <option key={c}>{c}</option>)}
             </select>
           </div>
-          <button
-            onClick={() => {
-              if (confirm("Restaurar preços, estoque e visibilidade originais?")) {
-                reset();
-                toast("Catálogo restaurado");
-              }
-            }}
-            className="btn btn-fill flex h-10 items-center justify-center gap-2 rounded-full px-4 text-sm"
-          >
-            <RotateCcw className="size-4" strokeWidth={1.5} /> Restaurar
-          </button>
         </div>
       </div>
 
@@ -413,5 +461,105 @@ function PriceInput({ value, label, onCommit }: { value: number; label: string; 
         className="h-9 w-full max-w-32 rounded-full border border-border bg-background pl-10 pr-3 text-sm tabular-nums outline-none transition-[border-color,box-shadow] duration-300 focus:border-rose focus:shadow-[0_0_0_4px_color-mix(in_oklab,var(--rose)_18%,transparent)]"
       />
     </div>
+  );
+}
+
+function PublishButton({ changes, busy, onClick }: { changes: number; busy: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy || changes === 0}
+      aria-busy={busy}
+      className="btn btn-primary btn-shine flex h-10 items-center gap-2 rounded-full pl-4 pr-3 text-sm font-medium"
+    >
+      {busy ? <Loader2 className="size-4 animate-spin" strokeWidth={1.5} /> : <CloudUpload className="size-4" strokeWidth={1.5} />}
+      <span className="hidden sm:inline">{busy ? "Publicando" : "Publicar"}</span>
+      {changes > 0 && !busy && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-white/25 px-1.5 text-[11px] tabular-nums">{changes}</span>}
+    </button>
+  );
+}
+
+function GitHubCard({ token, publishedAt, onToken }: { token: string; publishedAt: string; onToken: (t: string) => void }) {
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function connect(e: React.FormEvent) {
+    e.preventDefault();
+    const t = value.trim();
+    if (!t) return setError("Cole o token para conectar.");
+    setBusy(true);
+    setError("");
+    try {
+      await checkToken(t);
+      setToken(t);
+      onToken(t);
+      setValue("");
+      toast.success("GitHub conectado");
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function disconnect() {
+    setToken("");
+    onToken("");
+    toast("GitHub desconectado deste navegador");
+  }
+
+  const when = publishedAt ? new Date(publishedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "";
+
+  return (
+    <form id="github" className="box scroll-mt-28 p-5" onSubmit={connect}>
+      <h2 className="text-sm font-medium">Publicação</h2>
+      {token ? (
+        <>
+          <p className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#dff3e6] px-3 py-1.5 text-xs font-medium text-[#1d6b3c] dark:bg-[#12301e] dark:text-[#8fd8aa]">
+            <Check className="size-3.5" strokeWidth={2} /> Conectado a {REPO}
+          </p>
+          <p className="mt-3 text-sm text-muted-foreground">{when ? `Última publicação: ${when}.` : "Ainda não houve publicação pelo painel."}</p>
+          <button type="button" onClick={disconnect} className="btn btn-fill mt-5 flex h-10 items-center gap-2 rounded-full px-4 text-sm">
+            <LogOut className="size-4" strokeWidth={1.5} /> Desconectar
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="mt-1 text-sm text-muted-foreground">Para publicar, conecte um token do GitHub com permissão de escrita em {REPO}.</p>
+          <div className="mt-5 flex flex-col gap-2">
+            <label htmlFor="gh-token" className="text-sm font-medium">Token do GitHub</label>
+            <div className="relative">
+              <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
+              <input
+                id="gh-token"
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="github_pat_..."
+                aria-invalid={!!error}
+                aria-describedby="gh-help"
+                className="h-11 w-full rounded-full border border-border bg-background pl-10 pr-4 text-sm outline-none transition-[border-color,box-shadow] duration-300 placeholder:text-muted-foreground focus:border-rose focus:shadow-[0_0_0_4px_color-mix(in_oklab,var(--rose)_18%,transparent)]"
+              />
+            </div>
+            {error ? (
+              <p id="gh-help" className="text-xs text-[#a1262b] dark:text-[#f3a5a8]">{error}</p>
+            ) : (
+              <p id="gh-help" className="text-xs text-muted-foreground">Fica salvo só neste navegador. Permissão necessária: Contents, leitura e escrita.</p>
+            )}
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button type="submit" disabled={busy} className="btn btn-dark flex h-10 items-center gap-2 rounded-full px-5 text-sm">
+              {busy && <Loader2 className="size-4 animate-spin" strokeWidth={1.5} />} Conectar
+            </button>
+            <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-rose hover:underline">
+              Criar token <ExternalLink className="size-3.5" strokeWidth={1.5} />
+            </a>
+          </div>
+        </>
+      )}
+    </form>
   );
 }
