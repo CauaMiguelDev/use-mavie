@@ -6,6 +6,8 @@ Loja on-line de moda feminina de Brasília. Divas usam Maviê.
 
 **Painel da loja:** https://cauamigueldev.github.io/use-mavie/painel
 
+**Código no GitHub:** https://github.com/CauaMiguelDev/use-mavie
+
 ## O que tem
 
 - Hero animada com fundo em WebGL, looks em sequência e atalho para a peça
