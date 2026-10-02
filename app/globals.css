@@ -297,6 +297,14 @@ html.lenis, html.lenis body { height: auto; }
 .chart .recharts-tooltip-cursor { fill: color-mix(in oklab, var(--rose) 10%, transparent); }
 .chart .recharts-surface:focus { outline: none; }
 
+/* Manchas de cor que flutuam devagar (fundo do menu do celular) */
+@keyframes drift-blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-36px, 48px) scale(1.12); }
+}
+.drift-blob { animation: drift-blob 14s ease-in-out infinite; }
+.drift-blob-2 { animation-duration: 18s; animation-direction: reverse; }
+
 /* Degradê que flui devagar pelas letras de "Maviê." (cada letra é uma fatia do mesmo degradê) */
 @keyframes grad-flow {
   0%, 100% { background-position: calc(var(--i) * 20%) 50%; }
@@ -305,5 +313,5 @@ html.lenis, html.lenis body { height: auto; }
 .grad-flow { animation: grad-flow 7s ease-in-out infinite; animation-delay: 1.8s; }
 
 @media (prefers-reduced-motion: reduce) {
-  .grad-flow { animation: none; }
+  .grad-flow, .drift-blob { animation: none; }
 }

@@ -8,9 +8,15 @@ export const metadata: Metadata = {
   other: {
     "codex-preview": "development",
   },
+  // Monograma "M" da marca (public/favicon.svg). PNG/ICO gerados por scripts/make-icons.py.
   icons: {
-    icon: `${BASE}/favicon.svg`,
-    shortcut: `${BASE}/favicon.svg`,
+    icon: [
+      { url: `${BASE}/favicon.svg`, type: "image/svg+xml" },
+      { url: `${BASE}/favicon.ico`, sizes: "48x48" },
+      { url: `${BASE}/icon-192.png`, sizes: "192x192", type: "image/png" },
+    ],
+    shortcut: `${BASE}/favicon.ico`,
+    apple: { url: `${BASE}/apple-touch-icon.png`, sizes: "180x180" },
   },
 };
 

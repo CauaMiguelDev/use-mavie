@@ -93,7 +93,7 @@ export default function Store() {
   return (
     <div className="grain">
       <ScrollProgress />
-      <Nav count={count} onBag={() => setOpen(true)} />
+      <Nav count={count} onBag={() => setOpen(true)} list={visible} onOpen={openProduct} />
       <main>
         <Hero list={visible} onOpen={openProduct} />
         <Marquee />
@@ -165,8 +165,20 @@ function AnimatedWordmark({ className = "" }: { className?: string }) {
   );
 }
 
-function Nav({ count, onBag }: { count: number; onBag: () => void }) {
+// Descrição curta de cada seção no menu do celular.
+const menuHints: Record<string, string> = {
+  catalogo: "Vestidos, conjuntos e bodies",
+  looks: "Inspirações prontas para montar o seu",
+  loja: "Do site ao WhatsApp em 3 passos",
+  trocas: "Regras simples, sem surpresa",
+};
+const featuredIds = ["longo-azul", "um-ombro-preto", "midi-vinho", "longo-fenda-preto"];
+
+function Nav({ count, onBag, list, onOpen }: { count: number; onBag: () => void; list: Product[]; onOpen: (id: string) => void }) {
   const reduce = useReducedMotion();
+  const pieces = list.length;
+  // primeira peça da lista de destaques que ainda tem estoque
+  const featured = featuredIds.map((id) => list.find((p) => p.id === id)).find((p) => p && totalStock(p) > 0);
   const { scrollY } = useScroll();
   const [hidden, setHidden] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -298,47 +310,133 @@ function Nav({ count, onBag }: { count: number; onBag: () => void }) {
             role="dialog"
             aria-modal="true"
             aria-label="Menu"
-            className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-background px-6 pb-8 pt-5 md:hidden"
+            className="fixed inset-0 z-50 flex flex-col overflow-y-auto overflow-x-hidden bg-background px-6 pb-7 pt-5 md:hidden"
             initial={reduce ? { opacity: 0 } : { clipPath: "circle(0% at 90% 6%)" }}
             animate={reduce ? { opacity: 1 } : { clipPath: "circle(150% at 90% 6%)" }}
             exit={reduce ? { opacity: 0 } : { clipPath: "circle(0% at 90% 6%)", transition: { duration: 0.45, ease: [0.77, 0, 0.175, 1] } }}
             transition={{ duration: 0.7, ease: [0.77, 0, 0.175, 1] }}
           >
-            <div aria-hidden className="bg-grad pointer-events-none absolute -right-32 -top-32 size-96 rounded-full opacity-20 blur-3xl" />
+            {/* manchas de cor que flutuam devagar no fundo */}
+            <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
+              <div className="drift-blob bg-grad absolute -right-32 -top-32 size-96 rounded-full opacity-20 blur-3xl" />
+              <div className="drift-blob drift-blob-2 absolute -bottom-40 -left-32 size-96 rounded-full bg-[color-mix(in_oklab,var(--peach)_80%,transparent)] opacity-60 blur-3xl" />
+            </div>
+
             <div className="relative flex items-center justify-between">
               <Wordmark />
-              <button onClick={() => setMenu(false)} aria-label="Fechar menu" className="btn grid size-11 place-items-center rounded-full border border-border">
+              <motion.button
+                onClick={() => setMenu(false)}
+                aria-label="Fechar menu"
+                initial={reduce ? false : { rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.25, ease }}
+                className="btn grid size-11 place-items-center rounded-full border border-border bg-background/70"
+              >
                 <X className="size-5" strokeWidth={1.5} />
-              </button>
+              </motion.button>
             </div>
-            <nav className="relative mt-14 flex flex-col" aria-label="Seções">
-              {sections.map((s, i) => (
-                <motion.a
-                  key={s.id}
-                  href={`#${s.id}`}
-                  onClick={() => setMenu(false)}
-                  initial={reduce ? false : { opacity: 0, y: 28 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.25 + i * 0.07, ease }}
-                  className="flex items-center justify-between border-b border-border py-4"
-                >
-                  <span className={`font-display text-[2.6rem] leading-none ${active === s.id ? "text-grad italic" : ""}`}>{s.label}</span>
-                  <ArrowUpRight className="size-6 text-muted-foreground" strokeWidth={1.25} />
-                </motion.a>
-              ))}
+
+            <nav className="relative mt-8 flex flex-col" aria-label="Seções">
+              {sections.map((s, i) => {
+                const on = active === s.id;
+                return (
+                  <motion.a
+                    key={s.id}
+                    href={`#${s.id}`}
+                    onClick={() => setMenu(false)}
+                    initial="hidden"
+                    animate="show"
+                    exit="out"
+                    custom={i}
+                    className="group flex items-center justify-between gap-4 border-b border-border py-3"
+                  >
+                    <span className="min-w-0">
+                      {/* o título sobe de trás de uma máscara, um depois do outro */}
+                      <span className="block overflow-hidden pb-1">
+                        <motion.span
+                          className={`block origin-bottom-left font-display text-[2.35rem] leading-[1.05] ${on ? "text-grad italic" : ""}`}
+                          variants={{
+                            hidden: reduce ? { opacity: 0 } : { y: "110%", rotate: 4 },
+                            show: { y: 0, rotate: 0, opacity: 1, transition: { duration: 0.75, delay: 0.28 + i * 0.07, ease } },
+                            out: { opacity: 0, transition: { duration: 0.15 } },
+                          }}
+                        >
+                          {s.label}
+                          {s.id === "catalogo" && <sup className="ml-1.5 align-super font-sans text-xs font-medium not-italic text-rose">{pieces}</sup>}
+                        </motion.span>
+                      </span>
+                      <motion.span
+                        className="block text-[13px] text-muted-foreground"
+                        variants={{
+                          hidden: { opacity: 0, y: 6 },
+                          show: { opacity: 1, y: 0, transition: { duration: 0.6, delay: 0.42 + i * 0.07, ease } },
+                          out: { opacity: 0, transition: { duration: 0.15 } },
+                        }}
+                      >
+                        {menuHints[s.id]}
+                      </motion.span>
+                    </span>
+                    <motion.span
+                      variants={{
+                        hidden: reduce ? { opacity: 0 } : { opacity: 0, scale: 0.6, rotate: -45 },
+                        show: { opacity: 1, scale: 1, rotate: 0, transition: { duration: 0.6, delay: 0.45 + i * 0.07, ease } },
+                        out: { opacity: 0, transition: { duration: 0.15 } },
+                      }}
+                      className={`grid size-11 shrink-0 place-items-center rounded-full border transition-[background-color,color,border-color,rotate] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-active:rotate-45 group-active:border-transparent group-active:bg-[var(--rose)] group-active:text-white ${
+                        on ? "bg-grad border-transparent text-white" : "border-border bg-background/80 text-muted-foreground"
+                      }`}
+                    >
+                      <ArrowUpRight className="size-5" strokeWidth={1.5} />
+                    </motion.span>
+                  </motion.a>
+                );
+              })}
             </nav>
+
+            {/* Peça em destaque: preenche o espaço com algo útil e abre a página do produto */}
+            {featured && (
+              <motion.button
+                type="button"
+                onClick={() => { setMenu(false); onOpen(featured.id); }}
+                initial={reduce ? false : { opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                transition={{ duration: 0.7, delay: 0.62, ease }}
+                className="box relative mt-6 flex items-center gap-3 p-2.5 text-left active:scale-[0.98]"
+              >
+                <img src={imageSrc(featured.image)} alt="" style={{ objectPosition: focusPos(featured) }} className="h-20 w-16 shrink-0 rounded-xl object-cover" />
+                <span className="min-w-0 flex-1">
+                  <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-rose">Peça em destaque</span>
+                  <span className="mt-0.5 block truncate font-medium">{featured.name}</span>
+                  <span className="text-sm tabular-nums text-muted-foreground">{brl(featured.price)}</span>
+                </span>
+                <span className="bg-grad grid size-10 shrink-0 place-items-center rounded-xl text-white">
+                  <ArrowUpRight className="size-4" strokeWidth={1.75} />
+                </span>
+              </motion.button>
+            )}
+
             <motion.div
               initial={reduce ? false : { opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6, ease }}
-              className="relative mt-auto grid gap-2"
+              exit={{ opacity: 0, transition: { duration: 0.15 } }}
+              transition={{ duration: 0.6, delay: 0.72, ease }}
+              className="relative mt-auto grid gap-2 pt-6"
             >
+              <p className="mb-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                <Truck className="size-3.5 text-rose" strokeWidth={1.5} /> Entregamos em Brasília. Pedidos pelo WhatsApp.
+              </p>
               <a href={whatsappUrl("Oi, Maviê! Vim pelo site.", WHATSAPP)} target="_blank" rel="noreferrer" className="btn btn-primary btn-shine flex h-12 items-center justify-center gap-2 rounded-full text-sm font-medium">
                 <MessageCircle className="size-4" strokeWidth={1.5} /> Falar no WhatsApp
               </a>
-              <a href={INSTAGRAM} target="_blank" rel="noreferrer" className="btn btn-fill flex h-12 items-center justify-center gap-2 rounded-full text-sm">
-                <Camera className="size-4" strokeWidth={1.5} /> @usemaviie_
-              </a>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => { setMenu(false); onBag(); }} className="btn btn-fill flex h-12 items-center justify-center gap-2 rounded-full text-sm">
+                  <ShoppingBag className="size-4" strokeWidth={1.5} /> Sacola{count > 0 && <span className="bg-grad grid size-5 place-items-center rounded-full text-[10px] font-medium text-white">{count}</span>}
+                </button>
+                <a href={INSTAGRAM} target="_blank" rel="noreferrer" className="btn btn-fill flex h-12 items-center justify-center gap-2 rounded-full text-sm">
+                  <Camera className="size-4" strokeWidth={1.5} /> Instagram
+                </a>
+              </div>
             </motion.div>
           </motion.div>
         )}
