@@ -453,8 +453,9 @@ function Hero({ list, onOpen }: { list: Product[]; onOpen: (id: string) => void 
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   // Na rolagem as CAIXAS se movem e a colagem encolhe de leve; as fotos ficam paradas.
+  // A foto menor desce (valor positivo) para nunca subir até a barra do topo / sacola.
   const yBig = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : 120]);
-  const ySmall = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : -160]);
+  const ySmall = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : 70]);
   const collageScale = useTransform(scrollYProgress, [0, 1], [1, reduce ? 1 : 0.92]);
   const textY = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : -80]);
   const textOpacity = useTransform(scrollYProgress, [0, 0.7], [1, reduce ? 1 : 0]);
