@@ -37,19 +37,6 @@ export function RevealText({ text, className = "", accent, as = "h2" }: { text: 
   );
 }
 
-// Faixa de texto gigante que desliza na horizontal conforme a rolagem.
-export function ScrollSlide({ children, distance = 18, className = "" }: { children: ReactNode; distance?: number; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const x = useTransform(scrollYProgress, [0, 1], reduce ? ["0%", "0%"] : [`${distance}%`, `-${distance}%`]);
-  return (
-    <div ref={ref} className={`overflow-hidden ${className}`}>
-      <motion.div style={{ x }}>{children}</motion.div>
-    </div>
-  );
-}
-
 // ---------- Fundo personalizado: seda líquida em WebGL ----------
 const VERT = "attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}";
 const FRAG = `precision mediump float;
@@ -165,7 +152,7 @@ export function Sparkles() {
     { l: "6%", t: "60%", s: 14, d: 0 },
     { l: "90%", t: "10%", s: 18, d: 0.8 },
     { l: "95%", t: "68%", s: 12, d: 1.6 },
-    { l: "32%", t: "94%", s: 16, d: 2.2 },
+    { l: "9%", t: "90%", s: 16, d: 2.2 },
   ];
   return (
     <>

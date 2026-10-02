@@ -297,13 +297,13 @@ html.lenis, html.lenis body { height: auto; }
 .chart .recharts-tooltip-cursor { fill: color-mix(in oklab, var(--rose) 10%, transparent); }
 .chart .recharts-surface:focus { outline: none; }
 
-/* Brilho que percorre as letras de "Maviê." */
-@keyframes letter-shine {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.35) saturate(1.15); }
+/* Degradê que flui devagar pelas letras de "Maviê." (cada letra é uma fatia do mesmo degradê) */
+@keyframes grad-flow {
+  0%, 100% { background-position: calc(var(--i) * 20%) 50%; }
+  50% { background-position: calc(var(--i) * 20% + 45%) 50%; }
 }
-.letter-shine { animation: letter-shine 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * 140ms + 1.6s); }
+.grad-flow { animation: grad-flow 7s ease-in-out infinite; animation-delay: 1.8s; }
 
 @media (prefers-reduced-motion: reduce) {
-  .letter-shine { animation: none; }
+  .grad-flow { animation: none; }
 }

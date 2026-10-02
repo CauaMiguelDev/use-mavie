@@ -5,12 +5,12 @@
 import { useEffect, useRef, useState } from "react";
 import Lenis from "lenis";
 import { AnimatePresence, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue } from "motion/react";
-import { ArrowRight, ArrowUp, Camera, Check, LockKeyhole, Menu, Minus, Plus, ShoppingBag, Truck, MessageCircle, Shirt, X, Ban, Tag, Package, Link2, MapPin, Sparkle } from "lucide-react";
+import { ArrowRight, ArrowUp, ArrowUpRight, Camera, Check, LockKeyhole, Menu, Minus, Plus, ShoppingBag, Truck, MessageCircle, Shirt, X, Ban, Tag, Package, Link2, MapPin, Sparkle } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { BASE, WHATSAPP, catalog, colorsOf, focusPos, img, brl, formatPhone, imageSrc, orderMessage, sizesOf, totalStock, whatsappUrl, INSTAGRAM, type BagItem, type Product } from "./products";
 import { useLiveCatalog } from "./supabase";
 import { ProductView } from "./product-view";
-import { Parallax, RevealText, ScrollProgress, ScrollSlide, SilkBackground, Sparkles, VelocityMarquee } from "./fx";
+import { Parallax, RevealText, ScrollProgress, SilkBackground, Sparkles, VelocityMarquee } from "./fx";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 // Enquadramento das fotos fixas (hero, looks): usa o ponto do rosto do catálogo.
@@ -19,7 +19,7 @@ const heroLooks = ["longo-fenda-preto", "recorte-azul", "midi-vinho", "costas-nu
 const sections = [
   { id: "catalogo", label: "Catálogo" },
   { id: "looks", label: "Looks" },
-  { id: "loja", label: "A loja" },
+  { id: "loja", label: "Como comprar" },
   { id: "trocas", label: "Trocas" },
 ];
 
@@ -95,7 +95,7 @@ export default function Store() {
       <ScrollProgress />
       <Nav count={count} onBag={() => setOpen(true)} />
       <main>
-        <Hero />
+        <Hero list={visible} onOpen={openProduct} />
         <Marquee />
         <Catalog items={visible} categories={cat.categories} onAdd={add} onOpen={openProduct} />
         <Lookbook />
@@ -115,13 +115,63 @@ function Wordmark({ className = "" }: { className?: string }) {
   return <span className={`font-display text-2xl font-semibold tracking-[0.08em] ${className}`}>USEMAVIÊ</span>;
 }
 
-// ---------- Nav flutuante: some ao descer, volta ao subir, marca a seção ativa ----------
+// ---------- Nav: faixa de avisos + menu flutuante (some ao descer, volta ao subir) ----------
+const announcements = ["Entregamos em Brasília", "Escolha pelo site e finalize pelo WhatsApp", "Novidades primeiro no Instagram @usemaviie_"];
+
+function Announcement() {
+  const reduce = useReducedMotion();
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (reduce) return;
+    const t = setInterval(() => setI((n) => (n + 1) % announcements.length), 4000);
+    return () => clearInterval(t);
+  }, [reduce]);
+  return (
+    <div className="relative h-5 overflow-hidden text-center text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.p
+          key={i}
+          initial={{ y: "110%", opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: "-110%", opacity: 0 }}
+          transition={{ duration: 0.55, ease }}
+          className="absolute inset-0"
+        >
+          {announcements[i]}
+        </motion.p>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// Logo que entra letra por letra (sem máscara, para não cortar o acento do Ê).
+function AnimatedWordmark({ className = "" }: { className?: string }) {
+  const reduce = useReducedMotion();
+  return (
+    <span aria-label="USEMAVIÊ" className={`inline-flex font-display font-semibold tracking-[0.08em] ${className}`}>
+      {"USEMAVIÊ".split("").map((c, i) => (
+        <motion.span
+          key={i}
+          aria-hidden
+          className="inline-block"
+          initial={reduce ? false : { opacity: 0, y: 10, filter: "blur(4px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          transition={{ duration: 0.7, delay: 0.2 + i * 0.045, ease }}
+        >
+          {c}
+        </motion.span>
+      ))}
+    </span>
+  );
+}
+
 function Nav({ count, onBag }: { count: number; onBag: () => void }) {
   const reduce = useReducedMotion();
   const { scrollY } = useScroll();
   const [hidden, setHidden] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState("");
+  const [hover, setHover] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
 
   useMotionValueEvent(scrollY, "change", (y) => {
@@ -142,39 +192,78 @@ function Nav({ count, onBag }: { count: number; onBag: () => void }) {
     return () => io.disconnect();
   }, []);
 
+  // Menu do celular: trava a rolagem da página e fecha com Esc.
+  useEffect(() => {
+    if (!menu) return;
+    const html = document.documentElement;
+    const prev = html.style.overflow;
+    html.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenu(false);
+    addEventListener("keydown", onKey);
+    return () => {
+      html.style.overflow = prev;
+      removeEventListener("keydown", onKey);
+    };
+  }, [menu]);
+
   return (
     <>
       <motion.header
+        initial={reduce ? false : { y: "-140%" }}
         animate={{ y: hidden && !reduce ? "-140%" : "0%" }}
-        transition={{ duration: 0.5, ease }}
-        className="fixed inset-x-0 top-3 z-40 px-3 md:top-4"
+        transition={{ duration: 0.6, ease }}
+        className="fixed inset-x-0 top-0 z-40 px-3"
       >
+        <motion.div
+          initial={false}
+          animate={{ height: scrolled ? 0 : 30, opacity: scrolled ? 0 : 1 }}
+          transition={{ duration: 0.4, ease }}
+          className="overflow-hidden"
+        >
+          <div className="pt-2"><Announcement /></div>
+        </motion.div>
         <div
-          className={`mx-auto flex h-14 max-w-5xl items-center justify-between rounded-full pl-5 pr-2 transition-[background-color,box-shadow,border-color] duration-500 ${
-            scrolled ? "glass" : "border border-transparent"
+          className={`mx-auto mt-2 flex max-w-5xl items-center justify-between rounded-full pl-5 pr-2 transition-[height,background-color,box-shadow,border-color] duration-500 md:mt-3 ${
+            scrolled ? "glass h-12" : "h-14 border border-transparent"
           }`}
         >
           <a href="#topo" aria-label="USE MAVIÊ, início" className="transition-opacity duration-300 hover:opacity-70">
-            <Wordmark className="text-xl md:text-2xl" />
+            <AnimatedWordmark className="text-xl md:text-2xl" />
           </a>
-          <nav className="hidden items-center gap-1 text-sm md:flex">
-            {sections.map((s) => (
-              <a
+          <nav className="hidden items-center gap-1 text-sm md:flex" onMouseLeave={() => setHover(null)} aria-label="Seções">
+            {sections.map((s, i) => (
+              <motion.a
                 key={s.id}
                 href={`#${s.id}`}
-                className={`relative rounded-full px-4 py-2 transition-colors duration-300 ${active === s.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                onMouseEnter={() => setHover(s.id)}
+                onFocus={() => setHover(s.id)}
+                onBlur={() => setHover(null)}
+                aria-current={active === s.id ? "true" : undefined}
+                initial={reduce ? false : { opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.35 + i * 0.06, ease }}
+                className={`relative isolate rounded-full px-4 py-2 transition-colors duration-300 ${active === s.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
+                {/* fundo que desliza entre os links no hover */}
+                {hover === s.id && (
+                  <motion.span layoutId="nav-hover" className="absolute inset-0 -z-10 rounded-full bg-background/80 shadow-[0_4px_14px_-6px_color-mix(in_oklab,var(--plum)_35%,transparent)]" transition={{ type: "spring", duration: 0.4, bounce: 0.1 }} />
+                )}
                 {active === s.id && (
                   <motion.span layoutId="nav-pill" className="absolute inset-0 -z-10 rounded-full bg-rose-soft" transition={{ type: "spring", duration: 0.5, bounce: 0.15 }} />
                 )}
                 {s.label}
-              </a>
+              </motion.a>
             ))}
           </nav>
-          <div className="flex items-center gap-1.5">
+          <motion.div
+            initial={reduce ? false : { opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.6, ease }}
+            className="flex items-center gap-1.5"
+          >
             <button
               onClick={onBag}
-              className="btn btn-dark flex h-10 items-center gap-2 rounded-full pl-4 pr-3 text-sm"
+              className={`btn btn-dark flex items-center gap-2 rounded-full pl-4 pr-3 text-sm transition-[height] duration-500 ${scrolled ? "h-9" : "h-10"}`}
               aria-label={`Abrir sacola, ${count} ${count === 1 ? "peça" : "peças"}`}
             >
               <motion.span key={count} initial={{ scale: 0.75 }} animate={{ scale: 1 }} transition={{ type: "spring", duration: 0.45, bounce: 0.5 }} className="grid">
@@ -195,45 +284,62 @@ function Nav({ count, onBag }: { count: number; onBag: () => void }) {
                 </AnimatePresence>
               </span>
             </button>
-            <button onClick={() => setMenu(true)} aria-label="Abrir menu" className="btn grid size-10 place-items-center rounded-full md:hidden">
+            <button onClick={() => setMenu(true)} aria-label="Abrir menu" aria-expanded={menu} className="btn grid size-10 place-items-center rounded-full md:hidden">
               <Menu className="size-5" strokeWidth={1.5} />
             </button>
-          </div>
+          </motion.div>
         </div>
       </motion.header>
 
+      {/* Menu do celular: abre como um círculo que cresce a partir do botão */}
       <AnimatePresence>
         {menu && (
           <motion.div
-            className="glass fixed inset-0 z-50 flex flex-col px-6 pb-10 pt-6 md:hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.2 } }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu"
+            className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-background px-6 pb-8 pt-5 md:hidden"
+            initial={reduce ? { opacity: 0 } : { clipPath: "circle(0% at 90% 6%)" }}
+            animate={reduce ? { opacity: 1 } : { clipPath: "circle(150% at 90% 6%)" }}
+            exit={reduce ? { opacity: 0 } : { clipPath: "circle(0% at 90% 6%)", transition: { duration: 0.45, ease: [0.77, 0, 0.175, 1] } }}
+            transition={{ duration: 0.7, ease: [0.77, 0, 0.175, 1] }}
           >
-            <div className="flex items-center justify-between">
+            <div aria-hidden className="bg-grad pointer-events-none absolute -right-32 -top-32 size-96 rounded-full opacity-20 blur-3xl" />
+            <div className="relative flex items-center justify-between">
               <Wordmark />
               <button onClick={() => setMenu(false)} aria-label="Fechar menu" className="btn grid size-11 place-items-center rounded-full border border-border">
                 <X className="size-5" strokeWidth={1.5} />
               </button>
             </div>
-            <nav className="mt-16 flex flex-col gap-2">
+            <nav className="relative mt-14 flex flex-col" aria-label="Seções">
               {sections.map((s, i) => (
                 <motion.a
                   key={s.id}
                   href={`#${s.id}`}
                   onClick={() => setMenu(false)}
-                  initial={{ opacity: 0, y: 24 }}
+                  initial={reduce ? false : { opacity: 0, y: 28 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.05 + i * 0.06, ease }}
-                  className="font-display text-5xl"
+                  transition={{ duration: 0.6, delay: 0.25 + i * 0.07, ease }}
+                  className="flex items-center justify-between border-b border-border py-4"
                 >
-                  {s.label}
+                  <span className={`font-display text-[2.6rem] leading-none ${active === s.id ? "text-grad italic" : ""}`}>{s.label}</span>
+                  <ArrowUpRight className="size-6 text-muted-foreground" strokeWidth={1.25} />
                 </motion.a>
               ))}
             </nav>
-            <a href={INSTAGRAM} target="_blank" rel="noreferrer" className="mt-auto inline-flex items-center gap-2 text-muted-foreground">
-              <Camera className="size-4" strokeWidth={1.5} /> @usemaviie_
-            </a>
+            <motion.div
+              initial={reduce ? false : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.6, ease }}
+              className="relative mt-auto grid gap-2"
+            >
+              <a href={whatsappUrl("Oi, Maviê! Vim pelo site.", WHATSAPP)} target="_blank" rel="noreferrer" className="btn btn-primary btn-shine flex h-12 items-center justify-center gap-2 rounded-full text-sm font-medium">
+                <MessageCircle className="size-4" strokeWidth={1.5} /> Falar no WhatsApp
+              </a>
+              <a href={INSTAGRAM} target="_blank" rel="noreferrer" className="btn btn-fill flex h-12 items-center justify-center gap-2 rounded-full text-sm">
+                <Camera className="size-4" strokeWidth={1.5} /> @usemaviie_
+              </a>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -242,16 +348,22 @@ function Nav({ count, onBag }: { count: number; onBag: () => void }) {
 }
 
 // ---------- Hero ----------
-function Hero() {
+const heroSub = "Vestidos, conjuntos e bodies que fazem você ser *notada.* Escolha seu look e finalize pelo WhatsApp, com entrega em Brasília.";
+
+function Hero({ list, onOpen }: { list: Product[]; onOpen: (id: string) => void }) {
   const reduce = useReducedMotion();
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+  // Na rolagem as CAIXAS se movem e a colagem encolhe de leve; as fotos ficam paradas.
   const yBig = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : 120]);
   const ySmall = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : -160]);
+  const collageScale = useTransform(scrollYProgress, [0, 1], [1, reduce ? 1 : 0.92]);
   const textY = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : -80]);
   const textOpacity = useTransform(scrollYProgress, [0, 0.7], [1, reduce ? 1 : 0]);
   const glow = useMotionValue({ x: 0.72, y: 0.38 }); // brilho fixo do fundo (não segue o cursor)
   const [look, setLook] = useState(0);
+  const current = list.find((p) => p.id === heroLooks[look]);
+  const small = list.find((p) => p.id === "babado-marrom");
 
   useEffect(() => {
     if (reduce) return;
@@ -260,13 +372,9 @@ function Hero() {
   }, [reduce, look]);
 
   return (
-    <section
-      id="topo"
-      ref={ref}
-      className="relative overflow-hidden"
-    >
+    <section id="topo" ref={ref} className="relative overflow-hidden">
       <SilkBackground mouse={glow} />
-      <div className="relative mx-auto grid min-h-[100dvh] max-w-7xl items-center gap-10 px-4 pb-12 pt-28 md:px-8 lg:grid-cols-[1.05fr_1fr] lg:pb-8 lg:pt-24">
+      <div className="relative mx-auto grid min-h-[100dvh] max-w-7xl items-center gap-10 px-4 pb-12 pt-32 md:px-8 lg:grid-cols-[1.05fr_1fr] lg:pb-8 lg:pt-28">
         <motion.div style={{ y: textY, opacity: textOpacity }} className="relative z-10">
           <motion.p
             initial={reduce ? false : { opacity: 0, y: 10 }}
@@ -276,121 +384,170 @@ function Hero() {
           >
             <Sparkle className="size-3.5 text-rose" strokeWidth={1.5} /> Moda feminina em Brasília
           </motion.p>
-          <h1 className="font-display text-6xl font-medium leading-[1.05] tracking-tight sm:text-7xl lg:text-[6.5rem]">
-            {["Divas", "usam"].map((w, i) => (
-              <span key={w} className="inline-block overflow-hidden pb-2 align-bottom">
+
+          <h1 className="font-display text-[3.6rem] font-medium leading-[1.02] tracking-tight sm:text-7xl lg:text-[6.5rem]">
+            <span className="block overflow-hidden pb-2">
+              {["Divas", "usam"].map((w, i) => (
                 <motion.span
-                  className="inline-block pr-[0.2em]"
-                  initial={reduce ? false : { y: "110%", rotate: 4 }}
+                  key={w}
+                  className="inline-block origin-bottom-left pr-[0.22em]"
+                  initial={reduce ? false : { y: "110%", rotate: 5 }}
                   animate={{ y: 0, rotate: 0 }}
-                  transition={{ duration: 1.1, delay: 0.15 + i * 0.12, ease }}
+                  transition={{ duration: 1.1, delay: 0.25 + i * 0.12, ease }}
                 >
                   {w}
                 </motion.span>
-              </span>
-            ))}
-            <span className="inline-block pb-3 align-bottom italic" aria-label="Maviê.">
+              ))}
+            </span>
+            {/* "Maviê." com degradê que flui devagar e um traço desenhado à mão por baixo */}
+            <span className="relative inline-block pb-5 italic" aria-label="Maviê.">
               {"Maviê.".split("").map((ch, i) => (
                 <motion.span
                   key={i}
                   aria-hidden
-                  className="text-grad letter-shine inline-block"
+                  className="text-grad grad-flow inline-block"
                   style={{ backgroundSize: "600% 100%", backgroundPosition: `${i * 20}% 50%`, "--i": i } as React.CSSProperties}
                   initial={reduce ? false : { opacity: 0, y: 36, filter: "blur(10px)" }}
                   animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  transition={{ duration: 1, delay: 0.45 + i * 0.06, ease }}
+                  transition={{ duration: 1, delay: 0.55 + i * 0.06, ease }}
                 >
                   {ch}
                 </motion.span>
               ))}
+              <svg aria-hidden viewBox="0 0 300 24" preserveAspectRatio="none" className="absolute -bottom-0.5 left-[2%] h-[0.22em] w-[96%] overflow-visible">
+                <defs>
+                  <linearGradient id="swash" x1="0" x2="1">
+                    <stop offset="0%" style={{ stopColor: "var(--plum)" }} />
+                    <stop offset="55%" style={{ stopColor: "var(--rose)" }} />
+                    <stop offset="100%" style={{ stopColor: "#e58aa9" }} />
+                  </linearGradient>
+                </defs>
+                <motion.path
+                  d="M4 16 C 60 5, 130 3, 190 10 S 270 21, 296 7"
+                  fill="none"
+                  stroke="url(#swash)"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  initial={reduce ? false : { pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: 1 }}
+                  transition={{ pathLength: { duration: 1.3, delay: 1.15, ease: [0.65, 0, 0.35, 1] }, opacity: { duration: 0.2, delay: 1.15 } }}
+                />
+              </svg>
             </span>
           </h1>
-          <motion.p
-            initial={reduce ? false : { opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.8, ease }}
-            className="mt-6 max-w-md text-lg leading-relaxed text-muted-foreground"
-          >
-            Peças escolhidas para você ser notada. Monte a sacola e finalize pelo WhatsApp, com entrega em Brasília.
-          </motion.p>
+
+          <p className="mt-6 max-w-md text-lg leading-relaxed text-muted-foreground">
+            {heroSub.split(" ").map((raw, i) => {
+              const strong = raw.startsWith("*");
+              return (
+                <motion.span
+                  key={i}
+                  className={`mr-[0.27em] inline-block ${strong ? "font-medium text-foreground" : ""}`}
+                  initial={reduce ? false : { opacity: 0, y: 10, filter: "blur(6px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  transition={{ duration: 0.6, delay: 0.95 + i * 0.022, ease }}
+                >
+                  {raw.replace(/\*/g, "")}
+                </motion.span>
+              );
+            })}
+          </p>
+
           <motion.div
             initial={reduce ? false : { opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.95, ease }}
+            transition={{ duration: 1, delay: 1.3, ease }}
             className="mt-9 flex flex-wrap gap-3"
           >
-              <a href="#catalogo" className="btn btn-primary btn-shine group inline-flex items-center gap-2 rounded-full px-7 py-4 text-sm font-medium">
-                Ver catálogo
-                <span className="icon-swap" aria-hidden>
-                  <ArrowRight className="size-4" strokeWidth={1.5} />
-                  <ArrowRight className="size-4" strokeWidth={1.5} />
-                </span>
-              </a>
-              <a href={INSTAGRAM} target="_blank" rel="noreferrer" className="btn btn-fill glass inline-flex items-center gap-2 rounded-full px-7 py-4 text-sm">
-                <Camera className="size-4" strokeWidth={1.5} /> @usemaviie_
-              </a>
+            <a href="#catalogo" className="btn btn-primary btn-shine group inline-flex items-center gap-2 rounded-full px-7 py-4 text-sm font-medium">
+              Ver catálogo
+              <span className="icon-swap" aria-hidden>
+                <ArrowRight className="size-4" strokeWidth={1.5} />
+                <ArrowRight className="size-4" strokeWidth={1.5} />
+              </span>
+            </a>
+            <a href={INSTAGRAM} target="_blank" rel="noreferrer" className="btn btn-fill glass inline-flex items-center gap-2 rounded-full px-7 py-4 text-sm">
+              <Camera className="size-4" strokeWidth={1.5} /> @usemaviie_
+            </a>
           </motion.div>
         </motion.div>
 
-        {/* Colagem: inclina com o cursor; parallax na rolagem; looks em sequência */}
-        <motion.div
-          className="relative mx-auto h-[60vh] w-full max-w-[520px] lg:h-[76vh]"
-        >
+        {/* Colagem: looks em sequência; caixas com parallax; fotos paradas e enquadradas */}
+        <motion.div style={{ scale: collageScale }} className="relative mx-auto h-[60vh] w-full max-w-[520px] lg:h-[76vh]">
           <motion.div
             style={{ y: yBig }}
             initial={reduce ? false : { clipPath: "inset(100% 0 0 0 round 2rem)" }}
             animate={{ clipPath: "inset(0% 0 0 0 round 2rem)" }}
-            transition={{ duration: 1.4, delay: 0.2, ease }}
+            transition={{ duration: 1.4, delay: 0.3, ease }}
             className="absolute inset-y-0 right-0 w-[78%] overflow-hidden rounded-[2rem] bg-muted shadow-[0_50px_90px_-40px_color-mix(in_oklab,var(--plum)_70%,transparent)]"
           >
-            <AnimatePresence mode="popLayout">
+            <AnimatePresence mode="popLayout" initial={false}>
               <motion.img
                 key={heroLooks[look]}
                 src={img(heroLooks[look])}
-                alt="Look da coleção USE MAVIÊ"
+                alt={current ? current.name : "Look da coleção USE MAVIÊ"}
                 style={{ objectPosition: posOf(heroLooks[look]) }}
                 className="absolute inset-0 h-full w-full object-cover"
-                initial={reduce ? false : { scale: 1.12, clipPath: "circle(0% at 50% 60%)" }}
-                animate={{ scale: 1, clipPath: "circle(110% at 50% 60%)" }}
+                initial={reduce ? false : { clipPath: "circle(0% at 50% 60%)" }}
+                animate={{ clipPath: "circle(110% at 50% 60%)" }}
                 exit={{ opacity: 0, transition: { duration: 0.8, delay: 0.6 } }}
-                transition={{ clipPath: { duration: 1.4, ease: [0.77, 0, 0.175, 1] }, scale: { duration: 6, ease: "linear" } }}
+                transition={{ duration: 1.4, ease: [0.77, 0, 0.175, 1] }}
               />
             </AnimatePresence>
-            <div className="absolute inset-x-0 bottom-0 z-10 flex gap-1.5 bg-gradient-to-t from-black/35 to-transparent p-4 pt-10">
-              {heroLooks.map((l, i) => (
-                <button key={l} aria-label={`Mostrar look ${i + 1}`} onClick={() => setLook(i)} className="relative h-1 flex-1 overflow-hidden rounded-full bg-white/35">
-                  {i === look && (
-                    <motion.span
-                      key={look}
-                      className="absolute inset-0 origin-left rounded-full bg-white"
-                      initial={{ scaleX: reduce ? 1 : 0 }}
-                      animate={{ scaleX: 1 }}
-                      transition={{ duration: 5, ease: "linear" }}
-                    />
-                  )}
-                  {i < look && <span className="absolute inset-0 rounded-full bg-white" />}
-                </button>
-              ))}
+            <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/45 via-black/10 to-transparent p-3 pt-20 sm:p-4 sm:pt-20">
+              {/* Cartão do look atual: nome, preço e atalho para a página do produto */}
+              <AnimatePresence mode="wait" initial={false}>
+                {current && (
+                  <motion.button
+                    key={current.id}
+                    onClick={() => onOpen(current.id)}
+                    initial={reduce ? false : { opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8, transition: { duration: 0.2 } }}
+                    transition={{ duration: 0.5, delay: 0.35, ease }}
+                    className="glass group mb-3 flex w-full items-center gap-3 rounded-2xl p-2 pl-4 text-left transition-transform duration-300 active:scale-[0.98]"
+                    aria-label={`Ver ${current.name}`}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{current.name}</span>
+                      <span className="text-xs tabular-nums text-muted-foreground">{brl(current.price)}</span>
+                    </span>
+                    <span className="bg-grad grid size-10 shrink-0 place-items-center rounded-xl text-white transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:rotate-45">
+                      <ArrowUpRight className="size-4" strokeWidth={1.75} />
+                    </span>
+                  </motion.button>
+                )}
+              </AnimatePresence>
+              <div className="flex gap-1.5">
+                {heroLooks.map((l, i) => (
+                  <button key={l} aria-label={`Mostrar look ${i + 1}`} onClick={() => setLook(i)} className="relative h-1 flex-1 overflow-hidden rounded-full bg-white/35">
+                    {i === look && (
+                      <motion.span
+                        key={look}
+                        className="absolute inset-0 origin-left rounded-full bg-white"
+                        initial={{ scaleX: reduce ? 1 : 0 }}
+                        animate={{ scaleX: 1 }}
+                        transition={{ duration: 5, ease: "linear" }}
+                      />
+                    )}
+                    {i < look && <span className="absolute inset-0 rounded-full bg-white" />}
+                  </button>
+                ))}
+              </div>
             </div>
           </motion.div>
-          <motion.div style={{ y: ySmall }} className="absolute bottom-[8%] left-0 z-10 w-[40%]">
-            <div>
-              <motion.div
-                initial={reduce ? false : { clipPath: "inset(0 100% 0 0 round 1.5rem)" }}
-                animate={{ clipPath: "inset(0 0% 0 0 round 1.5rem)" }}
-                transition={{ duration: 1.2, delay: 0.7, ease }}
-                className="overflow-hidden rounded-3xl border-[6px] border-background shadow-[0_30px_60px_-24px_color-mix(in_oklab,var(--rose)_60%,transparent)]"
-              >
-                <motion.img
-                  src={img("babado-marrom")}
-                  alt="Vestido babado cacau"
-                  style={{ objectPosition: posOf("babado-marrom") }}
-                  className="aspect-[3/4] w-full object-cover"
-                  animate={reduce ? undefined : { scale: [1, 1.07, 1] }}
-                  transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-                />
-              </motion.div>
-            </div>
+          <motion.div style={{ y: ySmall }} className="absolute bottom-[27%] left-0 z-10 w-[38%]">
+            <motion.button
+              type="button"
+              onClick={() => small && onOpen(small.id)}
+              aria-label={small ? `Ver ${small.name}` : "Vestido babado cacau"}
+              initial={reduce ? false : { clipPath: "inset(0 100% 0 0 round 1.5rem)" }}
+              animate={{ clipPath: "inset(0 0% 0 0 round 1.5rem)" }}
+              transition={{ duration: 1.2, delay: 0.8, ease }}
+              className="block w-full overflow-hidden rounded-3xl border-[6px] border-background shadow-[0_30px_60px_-24px_color-mix(in_oklab,var(--rose)_60%,transparent)] transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1"
+            >
+              <img src={img("babado-marrom")} alt="" style={{ objectPosition: posOf("babado-marrom") }} className="aspect-[3/4] w-full object-cover" />
+            </motion.button>
           </motion.div>
           <SpinBadge />
           <Sparkles />
@@ -782,13 +939,7 @@ function Footer({ whatsapp }: { whatsapp: string }) {
           </div>
         </div>
 
-        <ScrollSlide distance={12} className="relative mt-10">
-          <p aria-hidden className="text-grad select-none whitespace-nowrap text-center font-display text-[17vw] font-semibold leading-[1] tracking-tight pt-[0.1em] -mb-[0.12em]">
-            USEMAVIÊ
-          </p>
-        </ScrollSlide>
-
-        <div className="relative flex flex-col items-center justify-between gap-3 border-t border-foreground/10 px-6 py-5 text-xs text-muted-foreground md:flex-row md:px-12">
+        <div className="relative mt-14 flex flex-col items-center justify-between gap-3 border-t border-foreground/10 px-6 py-5 text-xs text-muted-foreground md:flex-row md:px-12">
           <p>© 2026 USE MAVIÊ. Versão demonstrativa: preços e estoque sujeitos a confirmação.</p>
           <div className="flex items-center gap-4">
             {/* Acesso discreto à área restrita (o painel pede senha). */}
@@ -911,23 +1062,29 @@ function Bag({ open, items, list, whatsapp, onClose, onChange }: {
   );
 }
 
-// Botão flutuante de atendimento; some com a sacola aberta e quando o rodapé aparece
+// Botão flutuante de atendimento; some com a sacola aberta, na hero (que já tem botões) e quando o rodapé aparece
 // (o rodapé já tem o WhatsApp, e o botão cobria o acesso ao painel e o "voltar ao topo").
 function WhatsAppFab({ number, hidden }: { number: string; hidden: boolean }) {
   const reduce = useReducedMotion();
   const [atFooter, setAtFooter] = useState(false);
+  const [atHero, setAtHero] = useState(true);
   const shown = useRef(false);
   useEffect(() => {
     const footer = document.querySelector("footer");
-    if (!footer) return;
-    const io = new IntersectionObserver(([e]) => setAtFooter(e.isIntersecting), { rootMargin: "0px 0px -60px 0px" });
-    io.observe(footer);
-    return () => io.disconnect();
+    const hero = document.getElementById("topo");
+    const ioFooter = new IntersectionObserver(([e]) => setAtFooter(e.isIntersecting), { rootMargin: "0px 0px -60px 0px" });
+    const ioHero = new IntersectionObserver(([e]) => setAtHero(e.intersectionRatio > 0.45), { threshold: [0, 0.45, 1] });
+    if (footer) ioFooter.observe(footer);
+    if (hero) ioHero.observe(hero);
+    return () => {
+      ioFooter.disconnect();
+      ioHero.disconnect();
+    };
   }, []);
   if (!number) return null;
   return (
     <AnimatePresence>
-      {!hidden && !atFooter && (
+      {!hidden && !atFooter && !atHero && (
         <motion.div
           initial={reduce ? false : { opacity: 0, y: 24, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
