@@ -12,10 +12,17 @@ const remote = execSync("git remote get-url origin").toString().trim();
 const ghRepo = remote.replace(/^.*github\.com[/:]/, "").replace(/\.git$/, "");
 
 rmSync("dist", { recursive: true, force: true });
-run("npm run build", {
-  // MSYS_NO_PATHCONV: no Git Bash do Windows, impede "/use-mavie" de virar caminho de disco.
-  env: { ...process.env, GITHUB_PAGES: "1", NEXT_PUBLIC_BASE_PATH: `/${repo}`, NEXT_PUBLIC_GH_REPO: ghRepo, MSYS_NO_PATHCONV: "1" },
-});
+try {
+  run("npm run build", {
+    // MSYS_NO_PATHCONV: no Git Bash do Windows, impede "/use-mavie" de virar caminho de disco.
+    env: { ...process.env, GITHUB_PAGES: "1", NEXT_PUBLIC_BASE_PATH: `/${repo}`, NEXT_PUBLIC_GH_REPO: ghRepo, MSYS_NO_PATHCONV: "1" },
+  });
+} catch (err) {
+  // ponytail: o Node 24 no Windows às vezes quebra AO SAIR (UV_HANDLE_CLOSING) com o build já pronto.
+  // Só segue se as páginas finais foram geradas (dist é apagado antes, então não são de um build antigo).
+  if (!["index.html", "painel.html"].every((f) => existsSync(join(out, f)))) throw err;
+  console.warn("\nAviso: o Node fechou com erro depois do build, mas as páginas foram geradas. Seguindo com a publicação.\n");
+}
 
 // O assetPrefix grava /_next dentro de dist/client/<repo>; o Pages serve a raiz em /<repo>/.
 if (!existsSync(join(out, repo, "_next"))) throw new Error(`Build sem ${out}/${repo}/_next; confira o assetPrefix.`);
