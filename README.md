@@ -32,12 +32,18 @@ A loja e o painel usam o mesmo banco (Supabase). Quando um pedido é registrado 
 - Trocar a senha: Supabase > **Authentication > Users** > `painel@usemavie.com.br` > **Reset password** (ou "Update user").
 - Banco sempre ativo: o plano grátis pausa após 7 dias sem uso; `.github/workflows/keepalive.yml` lê o catálogo a cada 3 dias. Se o banco cair, a loja continua no ar com o catálogo publicado.
 
+### Dados protegidos
+
+O banco é a fonte das peças, pedidos e fotos. Publicar o site (`npm run deploy`) ou mudar o código **nunca** altera o banco: só o painel grava nele. O `catalog-data.json` do código é usado apenas como reserva enquanto o banco carrega.
+
+Proteções do `supabase/protect.sql`: cópia automática de cada versão salva (tabela `store_history`, 180 dias), bloqueio de catálogo vazio, as linhas da loja não podem ser apagadas e as fotos enviadas não podem ser apagadas nem trocadas. Como voltar uma versão está no fim do arquivo.
+
 ### Configuração (já feita)
 
 Projeto `urrfgrtbgwnzrbussfxe`. Para recriar em outro projeto:
 
 1. Crie um projeto em https://supabase.com (plano gratuito).
-2. Em **SQL Editor**, cole `supabase/setup.sql` e clique em **Run**.
+2. Em **SQL Editor**, cole `supabase/setup.sql` e clique em **Run**; depois faça o mesmo com `supabase/protect.sql`.
 3. Em **Authentication > Users**, crie `painel@usemavie.com.br` com a senha do painel e marque **Auto Confirm User**.
 4. Em **Authentication > Sign In / Providers**, desligue **Allow new users to sign up**.
 5. Em **Project Settings > API Keys**, copie a **Publishable key** e a URL do projeto para `app/supabase.ts` e `.github/workflows/keepalive.yml`.
