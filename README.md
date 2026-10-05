@@ -13,8 +13,9 @@ Loja on-line de moda feminina de Brasília. Divas usam Maviê.
 - Hero animada com fundo em WebGL, looks em sequência e atalho para a peça
 - Catálogo com filtros por categoria, tamanhos e aviso de estoque
 - Sacola que monta o pedido e envia pelo WhatsApp
-- Looks, como comprar e política de troca
+- Looks, como comprar e política de troca (prazo de 7 dias corridos)
 - Painel com pedidos, pagamentos, vendas, produtos, estoque por tamanho e categorias, ligado à loja em tempo real
+- Vitrine no painel: troque, reordene ou adicione as fotos do destaque da página inicial (até 8) e a foto menor da colagem, inclusive enviando foto nova
 
 ## Antes de usar de verdade
 

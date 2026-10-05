@@ -5,17 +5,17 @@
 import { useEffect, useRef, useState } from "react";
 import Lenis from "lenis";
 import { AnimatePresence, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue } from "motion/react";
-import { ArrowRight, ArrowUp, ArrowUpRight, Camera, Check, LockKeyhole, Menu, Minus, Plus, ShoppingBag, Truck, MessageCircle, Shirt, X, Ban, Tag, Package, Link2, MapPin, Sparkle } from "lucide-react";
+import { ArrowRight, ArrowUp, ArrowUpRight, CalendarClock, Camera, Check, LockKeyhole, Menu, Minus, Plus, ShoppingBag, Truck, MessageCircle, Shirt, X, Ban, Tag, Package, Link2, MapPin, Sparkle } from "lucide-react";
 import { Toaster, toast } from "sonner";
-import { BASE, WHATSAPP, catalog, colorsOf, focusPos, img, brl, formatPhone, imageSrc, orderMessage, sizesOf, totalStock, whatsappUrl, INSTAGRAM, type BagItem, type Product } from "./products";
+import { BASE, WHATSAPP, catalog, colorsOf, focusPos, heroOf, img, brl, formatPhone, imageSrc, orderMessage, sizesOf, totalStock, whatsappUrl, INSTAGRAM, type BagItem, type Product } from "./products";
 import { useLiveCatalog } from "./supabase";
+import { Logo } from "./logo";
 import { ProductView } from "./product-view";
 import { Parallax, RevealText, ScrollProgress, SilkBackground, Sparkles, VelocityMarquee } from "./fx";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 // Enquadramento das fotos fixas (hero, looks): usa o ponto do rosto do catálogo.
 const posOf = (id: string) => focusPos(catalog.products.find((p) => p.id === id) ?? {});
-const heroLooks = ["longo-fenda-preto", "recorte-azul", "midi-vinho", "costas-nuas-preto"];
 const sections = [
   { id: "catalogo", label: "Catálogo" },
   { id: "looks", label: "Looks" },
@@ -95,7 +95,7 @@ export default function Store() {
       <ScrollProgress />
       <Nav count={count} onBag={() => setOpen(true)} list={visible} onOpen={openProduct} />
       <main>
-        <Hero list={visible} onOpen={openProduct} />
+        <Hero list={visible} hero={heroOf(cat, visible)} onOpen={openProduct} />
         <Marquee />
         <Catalog items={visible} categories={cat.categories} onAdd={add} onOpen={openProduct} />
         <Lookbook />
@@ -111,12 +111,12 @@ export default function Store() {
   );
 }
 
-function Wordmark({ className = "" }: { className?: string }) {
-  return <span className={`font-display text-2xl font-semibold tracking-[0.08em] ${className}`}>USEMAVIÊ</span>;
+function Wordmark({ className = "h-[22px]" }: { className?: string }) {
+  return <Logo className={className} />;
 }
 
 // ---------- Nav: faixa de avisos + menu flutuante (some ao descer, volta ao subir) ----------
-const announcements = ["Entregamos em Brasília", "Escolha pelo site e finalize pelo WhatsApp", "Novidades primeiro no Instagram @usemaviie_"];
+const announcements = ["Entregamos em Brasília", "Escolha pelo site e finalize pelo WhatsApp", "Trocas em até 7 dias corridos", "Novidades primeiro no Instagram @usemaviie_"];
 
 function Announcement() {
   const reduce = useReducedMotion();
@@ -144,24 +144,18 @@ function Announcement() {
   );
 }
 
-// Logo que entra letra por letra (sem máscara, para não cortar o acento do Ê).
+// Logo original que entra da esquerda para a direita, ganhando foco.
 function AnimatedWordmark({ className = "" }: { className?: string }) {
   const reduce = useReducedMotion();
   return (
-    <span aria-label="USEMAVIÊ" className={`inline-flex font-display font-semibold tracking-[0.08em] ${className}`}>
-      {"USEMAVIÊ".split("").map((c, i) => (
-        <motion.span
-          key={i}
-          aria-hidden
-          className="inline-block"
-          initial={reduce ? false : { opacity: 0, y: 10, filter: "blur(4px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{ duration: 0.7, delay: 0.2 + i * 0.045, ease }}
-        >
-          {c}
-        </motion.span>
-      ))}
-    </span>
+    <motion.span
+      className="inline-flex"
+      initial={reduce ? false : { clipPath: "inset(0 100% 0 0)", opacity: 0, filter: "blur(4px)" }}
+      animate={{ clipPath: "inset(0 0% 0 0)", opacity: 1, filter: "blur(0px)" }}
+      transition={{ duration: 1.1, delay: 0.2, ease }}
+    >
+      <Logo className={className} />
+    </motion.span>
   );
 }
 
@@ -170,7 +164,7 @@ const menuHints: Record<string, string> = {
   catalogo: "Vestidos, conjuntos e bodies",
   looks: "Inspirações prontas para montar o seu",
   loja: "Do site ao WhatsApp em 3 passos",
-  trocas: "Regras simples, sem surpresa",
+  trocas: "Prazo de 7 dias corridos para trocar",
 };
 const featuredIds = ["longo-azul", "um-ombro-preto", "midi-vinho", "longo-fenda-preto"];
 
@@ -240,7 +234,7 @@ function Nav({ count, onBag, list, onOpen }: { count: number; onBag: () => void;
           }`}
         >
           <a href="#topo" aria-label="USE MAVIÊ, início" className="transition-opacity duration-300 hover:opacity-70">
-            <AnimatedWordmark className="text-xl md:text-2xl" />
+            <AnimatedWordmark className="h-[19px] md:h-[23px]" />
           </a>
           <nav className="hidden items-center gap-1 text-sm md:flex" onMouseLeave={() => setHover(null)} aria-label="Seções">
             {sections.map((s, i) => (
@@ -448,7 +442,7 @@ function Nav({ count, onBag, list, onOpen }: { count: number; onBag: () => void;
 // ---------- Hero ----------
 const heroSub = "Vestidos, conjuntos e bodies que fazem você ser *notada.* Escolha seu look e finalize pelo WhatsApp, com entrega em Brasília.";
 
-function Hero({ list, onOpen }: { list: Product[]; onOpen: (id: string) => void }) {
+function Hero({ list, hero, onOpen }: { list: Product[]; hero: ReturnType<typeof heroOf>; onOpen: (id: string) => void }) {
   const reduce = useReducedMotion();
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
@@ -461,12 +455,17 @@ function Hero({ list, onOpen }: { list: Product[]; onOpen: (id: string) => void 
   const textOpacity = useTransform(scrollYProgress, [0, 0.7], [1, reduce ? 1 : 0]);
   const glow = useMotionValue({ x: 0.72, y: 0.38 }); // brilho fixo do fundo (não segue o cursor)
   const [look, setLook] = useState(0);
-  const current = list.find((p) => p.id === heroLooks[look]);
-  const small = list.find((p) => p.id === "babado-marrom");
+  // Fotos vêm da Vitrine do painel (heroOf já garante peças visíveis e um padrão se estiver vazia).
+  const slides = hero.slides;
+  const slide = slides[look % slides.length];
+  const current = list.find((p) => p.id === slide.productId);
+  const smallSlide = hero.small;
+  const small = smallSlide ? list.find((p) => p.id === smallSlide.productId) : undefined;
+  const posFor = (p: Product | undefined, image: string) => (p && image === p.image ? focusPos(p) : "50% 25%");
 
   useEffect(() => {
     if (reduce) return;
-    const t = setTimeout(() => setLook((l) => (l + 1) % heroLooks.length), 5000);
+    const t = setTimeout(() => setLook((l) => (l + 1) % slides.length), 5000);
     return () => clearTimeout(t);
   }, [reduce, look]);
 
@@ -582,10 +581,10 @@ function Hero({ list, onOpen }: { list: Product[]; onOpen: (id: string) => void 
           >
             <AnimatePresence mode="popLayout" initial={false}>
               <motion.img
-                key={heroLooks[look]}
-                src={img(heroLooks[look])}
+                key={`${slide.productId}-${slide.image}`}
+                src={imageSrc(slide.image)}
                 alt={current ? current.name : "Look da coleção USE MAVIÊ"}
-                style={{ objectPosition: posOf(heroLooks[look]) }}
+                style={{ objectPosition: posFor(current, slide.image) }}
                 className="absolute inset-0 h-full w-full object-cover"
                 initial={reduce ? false : { clipPath: "circle(0% at 50% 60%)" }}
                 animate={{ clipPath: "circle(110% at 50% 60%)" }}
@@ -618,9 +617,9 @@ function Hero({ list, onOpen }: { list: Product[]; onOpen: (id: string) => void 
                 )}
               </AnimatePresence>
               <div className="flex gap-1.5">
-                {heroLooks.map((l, i) => (
-                  <button key={l} aria-label={`Mostrar look ${i + 1}`} onClick={() => setLook(i)} className="relative h-1 flex-1 overflow-hidden rounded-full bg-white/35">
-                    {i === look && (
+                {slides.map((l, i) => (
+                  <button key={`${l.productId}-${i}`} aria-label={`Mostrar look ${i + 1}`} onClick={() => setLook(i)} className="relative h-1 flex-1 overflow-hidden rounded-full bg-white/35">
+                    {i === look % slides.length && (
                       <motion.span
                         key={look}
                         className="absolute inset-0 origin-left rounded-full bg-white"
@@ -629,25 +628,27 @@ function Hero({ list, onOpen }: { list: Product[]; onOpen: (id: string) => void 
                         transition={{ duration: 5, ease: "linear" }}
                       />
                     )}
-                    {i < look && <span className="absolute inset-0 rounded-full bg-white" />}
+                    {i < look % slides.length && <span className="absolute inset-0 rounded-full bg-white" />}
                   </button>
                 ))}
               </div>
             </div>
           </motion.div>
+          {smallSlide && small && (
           <motion.div style={{ y: ySmall }} className="absolute bottom-[27%] left-0 z-10 w-[38%]">
             <motion.button
               type="button"
-              onClick={() => small && onOpen(small.id)}
-              aria-label={small ? `Ver ${small.name}` : "Vestido babado cacau"}
+              onClick={() => onOpen(small.id)}
+              aria-label={`Ver ${small.name}`}
               initial={reduce ? false : { clipPath: "inset(0 100% 0 0 round 1.5rem)" }}
               animate={{ clipPath: "inset(0 0% 0 0 round 1.5rem)" }}
               transition={{ duration: 1.2, delay: 0.8, ease }}
               className="block w-full overflow-hidden rounded-3xl border-[6px] border-background shadow-[0_30px_60px_-24px_color-mix(in_oklab,var(--rose)_60%,transparent)] transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1"
             >
-              <img src={img("babado-marrom")} alt="" style={{ objectPosition: posOf("babado-marrom") }} className="aspect-[3/4] w-full object-cover" />
+              <img src={imageSrc(smallSlide.image)} alt="" style={{ objectPosition: posFor(small, smallSlide.image) }} className="aspect-[3/4] w-full object-cover" />
             </motion.button>
           </motion.div>
+          )}
           <SpinBadge />
           <Sparkles />
         </motion.div>
@@ -957,33 +958,49 @@ function StepBox({ step: { icon: Icon, t, d }, progress, range }: { step: Step; 
 // ---------- Política de troca (bento) ----------
 function Exchanges() {
   const reduce = useReducedMotion();
+  // Texto da política oficial da loja. O prazo vem em destaque; a regra da promoção fecha a seção.
   const rules = [
-    { icon: Ban, t: "Não trocamos peças brancas.", cls: "md:col-span-3 bg-grad text-white", hero: true },
-    { icon: Shirt, t: "Não trocamos peças de tricô, renda, cetim, tule, paetê e strass.", cls: "md:col-span-3" },
-    { icon: Tag, t: "O produto deve estar em perfeito estado, com etiquetas e embalagens originais.", cls: "md:col-span-2" },
-    { icon: Package, t: "Trocas nos pontos de retirada da loja ou por motoboy, com envio pago pela cliente.", cls: "md:col-span-2" },
-    { icon: X, t: "Não fazemos troca de itens comprados em promoção.", cls: "md:col-span-2" },
+    { icon: Ban, t: "Não trocamos peças brancas." },
+    { icon: Shirt, t: "Não trocamos peças de tricô, renda, cetim, tule, paetê e strass." },
+    { icon: Tag, t: "O produto deve estar em perfeito estado, com etiquetas e embalagens originais." },
+    { icon: Package, t: "As trocas são feitas nos pontos de retirada da loja ou por motoboy, com custo de envio pago pela cliente." },
   ];
+  const reveal = (i: number) => ({
+    initial: reduce ? false : { opacity: 0, y: 24 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, amount: 0.35 },
+    transition: { duration: 0.8, delay: i * 0.06, ease },
+  });
   return (
     <section id="trocas" className="mx-auto max-w-7xl px-4 py-24 md:px-8 md:py-32">
       <RevealText text="Política de" accent="troca" className="font-display text-5xl font-medium tracking-tight md:text-7xl" />
       <p className="mt-3 max-w-[60ch] text-muted-foreground">Antes de comprar, vale conferir. Assim a sua troca acontece sem surpresa.</p>
       <div className="mt-12 grid gap-4 md:grid-cols-6">
-        {rules.map(({ icon: Icon, t, cls, hero }, i) => (
-          <motion.div
-            key={t}
-            initial={reduce ? false : { opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.4 }}
-            transition={{ duration: 0.8, delay: i * 0.06, ease }}
-            className={`${hero ? "rounded-3xl shadow-[var(--shadow-rose)]" : "box box-hover"} flex min-h-44 flex-col justify-between p-7 ${cls}`}
-          >
-            <span className={`grid size-11 place-items-center rounded-2xl ${hero ? "bg-white/20" : "bg-rose-soft text-rose"}`}>
+        <motion.div {...reveal(0)} className="bg-grad relative flex min-h-56 flex-col justify-between overflow-hidden rounded-3xl p-7 text-white shadow-[var(--shadow-rose)] md:col-span-4 md:row-span-2 md:p-9">
+          <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 size-64 rounded-full bg-white/15 blur-2xl" />
+          <span className="relative grid size-12 place-items-center rounded-2xl bg-white/20">
+            <CalendarClock className="size-6" strokeWidth={1.5} />
+          </span>
+          <div className="relative mt-8">
+            <p className="text-sm font-medium uppercase tracking-[0.18em] text-white/80">Prazo para trocas</p>
+            <p className="mt-2 font-display text-6xl leading-none md:text-8xl">7 dias</p>
+            <p className="mt-2 font-display text-2xl italic text-white/90 md:text-3xl">corridos</p>
+          </div>
+        </motion.div>
+        {rules.map(({ icon: Icon, t }, i) => (
+          <motion.div key={t} {...reveal(i + 1)} className={`box box-hover flex min-h-40 flex-col justify-between p-6 ${i < 2 ? "md:col-span-2" : "md:col-span-3"}`}>
+            <span className="grid size-11 place-items-center rounded-2xl bg-rose-soft text-rose">
               <Icon className="size-5" strokeWidth={1.5} />
             </span>
-            <p className={`mt-6 leading-relaxed ${hero ? "font-display text-3xl" : "text-[15px]"}`}>{t}</p>
+            <p className="mt-5 text-[15px] leading-relaxed">{t}</p>
           </motion.div>
         ))}
+        <motion.div {...reveal(5)} className="box flex items-center gap-4 p-5 md:col-span-6">
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#fde2e2] text-[#a1262b]">
+            <X className="size-5" strokeWidth={1.75} />
+          </span>
+          <p className="text-[15px] leading-relaxed"><strong className="font-medium">Não fazemos troca de itens comprados em promoção.</strong></p>
+        </motion.div>
       </div>
     </section>
   );
@@ -1021,6 +1038,7 @@ function Footer({ whatsapp }: { whatsapp: string }) {
               <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2"><MapPin className="size-4" strokeWidth={1.5} /> Loja on-line em Brasília</li>
                 <li className="flex items-center gap-2"><Truck className="size-4" strokeWidth={1.5} /> Entregas na cidade</li>
+                <li><a href="#trocas" className="inline-flex items-center gap-2 transition-colors duration-300 hover:text-rose"><CalendarClock className="size-4" strokeWidth={1.5} /> Trocas em até 7 dias corridos</a></li>
                 <li>
                   <a href={whatsappUrl("Oi, Maviê! Vim pelo site.", whatsapp)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 transition-colors duration-300 hover:text-rose">
                     <MessageCircle className="size-4" strokeWidth={1.5} /> {whatsapp ? formatPhone(whatsapp) : "Pedidos pelo WhatsApp"}

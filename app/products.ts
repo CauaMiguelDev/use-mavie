@@ -28,9 +28,32 @@ export type Product = {
 
 // object-position que mantém o rosto à vista em qualquer proporção de caixa.
 export const focusPos = (p: Pick<Product, "focus">) => (p.focus ? `${p.focus[0]}% ${p.focus[1]}%` : "50% 20%");
-export type Catalog = { categories: string[]; products: Product[]; updatedAt: string };
+// Vitrine da página inicial: fotos que passam no destaque + foto menor. Cada foto aponta para uma peça
+// (o cartão do destaque mostra nome, preço e abre a peça) e para uma das fotos dela.
+export type HeroSlide = { productId: string; image: string };
+export type HeroConfig = { slides: HeroSlide[]; small: HeroSlide | null };
+export type Catalog = { categories: string[]; products: Product[]; updatedAt: string; hero?: HeroConfig };
 
 export const catalog = data as unknown as Catalog; // JSON não guarda o tipo da tupla focus
+
+export const MAX_HERO_SLIDES = 8;
+const DEFAULT_HERO = { slides: ["longo-fenda-preto", "recorte-azul", "midi-vinho", "costas-nuas-preto"], small: "babado-marrom" };
+
+// Vitrine pronta para exibir: só peças visíveis; foto que não existe mais na peça volta para a principal.
+// Se nada sobrar (vitrine nunca configurada ou peças removidas), usa o padrão.
+export function heroOf(c: Pick<Catalog, "hero">, visible: Product[]): { slides: HeroSlide[]; small: HeroSlide | null } {
+  const fix = (s: HeroSlide | null | undefined): HeroSlide | null => {
+    const p = s && visible.find((x) => x.id === s.productId);
+    if (!p) return null;
+    return { productId: p.id, image: photosOf(p).includes(s!.image) ? s!.image : p.image };
+  };
+  const fromIds = (id: string) => fix({ productId: id, image: "" });
+  let slides = (c.hero?.slides ?? []).map(fix).filter((s): s is HeroSlide => !!s).slice(0, MAX_HERO_SLIDES);
+  if (!slides.length) slides = DEFAULT_HERO.slides.map(fromIds).filter((s): s is HeroSlide => !!s);
+  if (!slides.length && visible[0]) slides = [{ productId: visible[0].id, image: visible[0].image }];
+  const small = c.hero ? fix(c.hero.small) : fromIds(DEFAULT_HERO.small);
+  return { slides, small };
+}
 
 export const sizesOf = (p: Product) => SIZES.filter((s) => s in p.stock);
 export const totalStock = (p: Product) => Object.values(p.stock).reduce((n, q) => n + q, 0);

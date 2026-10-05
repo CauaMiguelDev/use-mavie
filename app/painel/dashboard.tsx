@@ -4,10 +4,11 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
-  AlertTriangle, Boxes, Check, ClipboardList, DatabaseBackup, FileUp, LayoutDashboard, Loader2, LogOut, ScrollText, Shirt, Store, Tags, TrendingUp, Wallet, type LucideIcon,
+  AlertTriangle, Images, Boxes, Check, ClipboardList, DatabaseBackup, FileUp, LayoutDashboard, Loader2, LogOut, ScrollText, Shirt, Store, Tags, TrendingUp, Wallet, type LucideIcon,
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { BASE } from "../products";
+import { Logo } from "../logo";
 import { AdminProvider, exportBackup, readBackup, useAdmin } from "./admin-store";
 import { lockPanel } from "./lock";
 import { ease } from "./ui";
@@ -19,6 +20,7 @@ import Orders from "./sections/orders";
 import Payments from "./sections/payments";
 import Sales from "./sections/sales";
 import History from "./sections/history";
+import Showcase from "./sections/showcase";
 
 const NAV: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "inicio", label: "Visão geral", icon: LayoutDashboard },
@@ -26,6 +28,7 @@ const NAV: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "pagamentos", label: "Pagamentos", icon: Wallet },
   { id: "vendas", label: "Vendas", icon: TrendingUp },
   { id: "produtos", label: "Produtos", icon: Shirt },
+  { id: "vitrine", label: "Vitrine", icon: Images },
   { id: "estoque", label: "Estoque", icon: Boxes },
   { id: "categorias", label: "Categorias", icon: Tags },
   { id: "historico", label: "Histórico", icon: ScrollText },
@@ -65,6 +68,7 @@ function Shell() {
     pagamentos: <Payments />,
     vendas: <Sales />,
     produtos: <Products />,
+    vitrine: <Showcase />,
     estoque: <Stock />,
     categorias: <Categories />,
     historico: <History />,
@@ -77,7 +81,7 @@ function Shell() {
       {/* Menu lateral (desktop) */}
       <aside className="glass fixed inset-y-3 left-3 z-30 hidden w-64 flex-col rounded-[2rem] p-4 lg:flex">
         <div className="px-3 pt-2">
-          <span className="font-display text-2xl font-semibold tracking-[0.08em]">USEMAVIÊ</span>
+          <Logo className="h-[22px]" />
           <p className="text-xs text-muted-foreground">Painel da loja</p>
         </div>
         <nav className="mt-6 flex flex-col gap-1" aria-label="Seções do painel">
@@ -95,7 +99,7 @@ function Shell() {
       <header className="sticky top-0 z-30 px-3 pt-3 lg:hidden">
         <div className="glass rounded-[1.75rem] p-2">
           <div className="flex items-center justify-between px-3 py-1">
-            <span className="font-display text-xl font-semibold tracking-[0.08em]">USEMAVIÊ</span>
+            <Logo className="h-[18px]" />
             <a href={`${BASE}/`} aria-label="Ver loja" className="btn btn-fill grid size-9 place-items-center rounded-full"><Store className="size-4" strokeWidth={1.5} /></a>
           </div>
           <nav className="mt-1 flex gap-1 overflow-x-auto scrollbar-none" aria-label="Seções do painel">

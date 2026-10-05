@@ -1,6 +1,6 @@
 // Regras do painel (puras, sem React): estoque por tamanho, pedidos, pagamentos e categorias.
 // Toda mudança de estoque gera uma movimentação; operações inválidas lançam Error com mensagem para a tela.
-import type { Catalog, Product } from "../products";
+import type { Catalog, HeroConfig, Product } from "../products";
 
 export const CHANNELS = ["WhatsApp", "Instagram", "Presencial"] as const;
 export const PAY_METHODS = ["Pix", "Cartão de crédito", "Cartão de débito", "Dinheiro"] as const;
@@ -118,6 +118,34 @@ export const toggleHidden = (s: AdminState, id: string): AdminState => ({
   ...s,
   catalog: { ...s.catalog, products: s.catalog.products.map((p) => (p.id === id ? { ...p, hidden: !p.hidden } : p)) },
 });
+
+// ---------- Vitrine (fotos do destaque da página inicial) ----------
+const HERO_MAX = 8; // igual a MAX_HERO_SLIDES em products.ts (aqui só tipos podem ser importados)
+const GALLERY_MAX = 6;
+const photosOfProduct = (p: Product) => [p.image, ...(p.gallery ?? [])];
+
+export function setHero(s: AdminState, hero: HeroConfig): AdminState {
+  if (!hero.slides.length) throw new Error("Deixe pelo menos uma foto no destaque.");
+  if (hero.slides.length > HERO_MAX) throw new Error(`O destaque aceita até ${HERO_MAX} fotos.`);
+  for (const slide of [...hero.slides, ...(hero.small ? [hero.small] : [])]) {
+    const p = s.catalog.products.find((x) => x.id === slide.productId);
+    if (!p) throw new Error("Uma das fotos aponta para uma peça que não existe mais.");
+    if (!photosOfProduct(p).includes(slide.image)) throw new Error(`Essa foto não pertence a ${p.name}.`);
+  }
+  return { ...s, catalog: { ...s.catalog, hero: structuredClone(hero) } };
+}
+
+// Foto nova enviada pela vitrine entra nas fotos extras da peça (aparece também na página do produto).
+export function addProductPhoto(s: AdminState, productId: string, image: string): AdminState {
+  const p = s.catalog.products.find((x) => x.id === productId);
+  if (!p) throw new Error("Produto não encontrado.");
+  if (!image) throw new Error("Escolha uma foto.");
+  if ((p.gallery ?? []).length >= GALLERY_MAX) throw new Error(`${p.name} já tem ${GALLERY_MAX} fotos extras. Remova uma em Produtos para adicionar outra.`);
+  return {
+    ...s,
+    catalog: { ...s.catalog, products: s.catalog.products.map((x) => (x.id === productId ? { ...x, gallery: [...(x.gallery ?? []), image] } : x)) },
+  };
+}
 
 // ---------- Categorias ----------
 export function addCategory(s: AdminState, name: string): AdminState {

@@ -263,7 +263,7 @@ function Body({ p, list, inBag, onAdd, onOpen, onClose }: {
             <li className="flex gap-3"><Truck className="mt-0.5 size-4 shrink-0 text-rose" strokeWidth={1.5} /> Entregamos em Brasília. Pagamento e entrega combinados no WhatsApp.</li>
             <li className="flex gap-3">
               <RefreshCw className="mt-0.5 size-4 shrink-0 text-rose" strokeWidth={1.5} />
-              <span>Trocas conforme a <button
+              <span>Trocas em até 7 dias corridos, conforme a <button
                   type="button"
                   onClick={() => { onClose(); setTimeout(() => document.getElementById("trocas")?.scrollIntoView({ behavior: "smooth" }), 250); }}
                   className="text-foreground underline underline-offset-4 hover:text-rose"

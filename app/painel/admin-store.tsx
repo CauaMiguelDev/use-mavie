@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
 import { catalog as published, type Catalog } from "../products";
 import { supabase, supabaseReady } from "../supabase";
+import { Logo } from "../logo";
 import { appendLog, initialState, uid, type AdminState } from "./admin-logic";
 import { Field, inputCls } from "./ui";
 import { PasswordGate, useAttemptLimit } from "./lock";
@@ -276,7 +277,7 @@ function Login() {
     <Center>
       <form onSubmit={submit} className="box space-y-5 p-6" noValidate>
         <div className="text-center">
-          <p className="font-display text-3xl font-semibold tracking-[0.08em]">USEMAVIÊ</p>
+          <Logo className="mx-auto h-7" />
           <p className="mt-1 text-sm text-muted-foreground">Entre para acessar o painel da loja.</p>
         </div>
         <Field label="E-mail" htmlFor="login-email">

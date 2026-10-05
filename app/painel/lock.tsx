@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Eye, EyeOff, Loader2, LockKeyhole } from "lucide-react";
 import { attemptsLeft, formatWait, freshLock, hashPassword, lockedFor, registerFail, registerSuccess, type LockState } from "./lock-logic";
 import { Field, inputCls } from "./ui";
+import { Logo } from "../logo";
 
 const PASS_KEY = "mavie-lock";
 const STATE_KEY = "mavie-lock-state";
@@ -72,7 +73,7 @@ function Header({ text }: { text: string }) {
   return (
     <div className="text-center">
       <span className="bg-grad mx-auto grid size-14 place-items-center rounded-2xl text-white"><LockKeyhole className="size-6" strokeWidth={1.5} /></span>
-      <p className="mt-4 font-display text-3xl font-semibold tracking-[0.08em]">USEMAVIÊ</p>
+      <Logo className="mx-auto mt-5 h-7" />
       <p className="mt-1 text-sm text-muted-foreground">{text}</p>
     </div>
   );
