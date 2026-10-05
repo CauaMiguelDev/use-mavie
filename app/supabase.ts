@@ -7,10 +7,12 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { catalog as fallback, type Catalog } from "./products";
 
 // Preencha com Project Settings > API do Supabase ("Project URL" e chave "anon public").
-const PROJECT_URL = "";
-const ANON_KEY = "";
+const PROJECT_URL = "https://urrfgrtbgwnzrbussfxe.supabase.co";
+const ANON_KEY = "sb_publishable_mC6JXMoUgGGVLXbjnUamyw_mXhg_ndk";
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || PROJECT_URL;
 export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ANON_KEY;
+// Login do painel: a loja digita só a senha; este é o usuário criado em Authentication > Users.
+export const ADMIN_EMAIL = "painel@usemavie.com.br";
 export const supabaseReady = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 let client: SupabaseClient | null = null;

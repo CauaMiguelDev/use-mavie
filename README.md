@@ -26,18 +26,22 @@ Loja on-line de moda feminina de Brasília. Divas usam Maviê.
 
 A loja e o painel usam o mesmo banco (Supabase). Quando um pedido é registrado no painel, o estoque cai na hora para todas as clientes; ao chegar a zero, a peça aparece como esgotada. Entradas de estoque, preços, produtos novos e categorias também aparecem na loja em segundos.
 
-- Painel: https://cauamigueldev.github.io/use-mavie/painel (login com e-mail e senha)
-- Seções: Visão geral, Pedidos, Pagamentos, Vendas, Produtos (com foto por arrastar e soltar), Estoque por tamanho e Categorias.
-- Acesso: o link fica discreto no rodapé (cadeado). Enquanto o Supabase não está conectado, o painel funciona no modo local: a senha já vem definida pela loja (só o hash fica no código, em `app/painel/lock.tsx`), e após 5 erros o painel trava por 5 minutos (cada novo bloqueio dobra o tempo). Com o Supabase, o acesso é por e-mail e senha, com o mesmo limite de tentativas.
+- Painel: https://cauamigueldev.github.io/use-mavie/painel (só a senha da loja)
+- Seções: Visão geral, Pedidos, Pagamentos, Vendas, Produtos (com foto por arrastar e soltar), Vitrine, Estoque por tamanho, Categorias e Histórico.
+- Acesso: o link fica discreto no rodapé (cadeado). A loja digita só a senha; por trás, o login é o usuário `painel@usemavie.com.br` do Supabase (`ADMIN_EMAIL` em `app/supabase.ts`). Após 5 erros o painel trava por 5 minutos (cada novo bloqueio dobra o tempo).
+- Trocar a senha: Supabase > **Authentication > Users** > `painel@usemavie.com.br` > **Reset password** (ou "Update user").
+- Banco sempre ativo: o plano grátis pausa após 7 dias sem uso; `.github/workflows/keepalive.yml` lê o catálogo a cada 3 dias. Se o banco cair, a loja continua no ar com o catálogo publicado.
 
-### Configuração (uma vez)
+### Configuração (já feita)
+
+Projeto `urrfgrtbgwnzrbussfxe`. Para recriar em outro projeto:
 
 1. Crie um projeto em https://supabase.com (plano gratuito).
-2. Em **SQL Editor**, cole `supabase/setup.sql`, troque o e-mail na última linha pelo e-mail de quem administra e clique em **Run**.
-3. Em **Authentication > Users**, crie o usuário com esse e-mail e uma senha.
+2. Em **SQL Editor**, cole `supabase/setup.sql` e clique em **Run**.
+3. Em **Authentication > Users**, crie `painel@usemavie.com.br` com a senha do painel e marque **Auto Confirm User**.
 4. Em **Authentication > Sign In / Providers**, desligue **Allow new users to sign up**.
-5. Em **Authentication > URL Configuration**, coloque `https://cauamigueldev.github.io/use-mavie/painel` em Site URL (para o link de "Esqueci a senha").
-6. Em **Project Settings > API**, copie a **Project URL** e a chave **anon public** e coloque em `app/supabase.ts`.
+5. Em **Project Settings > API Keys**, copie a **Publishable key** e a URL do projeto para `app/supabase.ts` e `.github/workflows/keepalive.yml`.
+6. Para levar produtos cadastrados no modo local: **Backup** no painel antigo, **Restaurar** no painel conectado.
 
 A chave anon é pública por natureza; quem protege os dados são as regras de segurança do `setup.sql`: só e-mails da tabela `admins` alteram dados, e pedidos e telefones de clientes nunca ficam públicos.
 

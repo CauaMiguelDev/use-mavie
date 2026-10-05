@@ -3,11 +3,11 @@
 // Estado do painel vindo do Supabase. Cada ação aplica uma regra pura (admin-logic) e salva
 // catálogo + pedidos juntos via save_state (tudo ou nada, com controle de versão entre aparelhos).
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { Loader2, LogOut } from "lucide-react";
+import { Loader2, LockKeyhole, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
 import { catalog as published, type Catalog } from "../products";
-import { supabase, supabaseReady } from "../supabase";
+import { ADMIN_EMAIL, supabase, supabaseReady } from "../supabase";
 import { Logo } from "../logo";
 import { appendLog, initialState, uid, type AdminState } from "./admin-logic";
 import { Field, inputCls } from "./ui";
@@ -246,7 +246,6 @@ function LocalLoaded({ children }: { children: ReactNode }) {
 }
 
 function Login() {
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -257,44 +256,36 @@ function Login() {
     if (limit.wait) return;
     setBusy(true);
     setError("");
-    const { error } = await supabase().auth.signInWithPassword({ email: email.trim(), password });
+    const { error } = await supabase().auth.signInWithPassword({ email: ADMIN_EMAIL, password });
     setBusy(false);
     if (!error) return limit.success();
     if (error.message.includes("Invalid login")) {
       limit.fail();
-      setError(limit.left - 1 > 0 ? `E-mail ou senha incorretos. Restam ${limit.left - 1} tentativas.` : "E-mail ou senha incorretos.");
-    } else setError("Não consegui entrar. Tente de novo.");
-  }
-
-  async function forgot() {
-    if (!email.trim()) return setError("Digite seu e-mail para receber o link de nova senha.");
-    const { error } = await supabase().auth.resetPasswordForEmail(email.trim(), { redirectTo: location.href.split("#")[0] });
-    if (error) setError("Não consegui enviar o e-mail. Tente de novo em alguns minutos.");
-    else toast.success("Enviamos um link para criar uma nova senha.");
+      setPassword("");
+      setError(limit.left - 1 > 0 ? `Senha incorreta. Restam ${limit.left - 1} ${limit.left - 1 === 1 ? "tentativa" : "tentativas"}.` : "Senha incorreta.");
+    } else setError("Não consegui entrar. Confira a internet e tente de novo.");
   }
 
   return (
     <Center>
       <form onSubmit={submit} className="box space-y-5 p-6" noValidate>
         <div className="text-center">
-          <Logo className="mx-auto h-7" />
-          <p className="mt-1 text-sm text-muted-foreground">Entre para acessar o painel da loja.</p>
+          <span className="bg-grad mx-auto grid size-14 place-items-center rounded-2xl text-white"><LockKeyhole className="size-6" strokeWidth={1.5} /></span>
+          <Logo className="mx-auto mt-5 h-7" />
+          <p className="mt-1 text-sm text-muted-foreground">Painel restrito. Digite a senha para entrar.</p>
         </div>
-        <Field label="E-mail" htmlFor="login-email">
-          <input id="login-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} />
-        </Field>
-        <Field label="Senha" htmlFor="login-pass" error={error}>
-          <input id="login-pass" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} aria-invalid={!!error} className={inputCls} />
-        </Field>
-        {limit.wait > 0 && (
-          <p role="alert" className="rounded-2xl bg-[#fde2e2] p-3 text-center text-sm text-[#a1262b]">
+        {limit.wait > 0 ? (
+          <p role="alert" className="rounded-2xl bg-[#fde2e2] p-4 text-center text-sm text-[#a1262b]">
             Muitas tentativas erradas. Tente de novo em <strong className="tabular-nums">{formatWait(limit.wait)}</strong>.
           </p>
+        ) : (
+          <Field label="Senha" htmlFor="login-pass" error={error}>
+            <input id="login-pass" type="password" autoComplete="current-password" value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }} aria-invalid={!!error} className={inputCls} />
+          </Field>
         )}
-        <button disabled={busy || !email || !password || limit.wait > 0} className="btn btn-primary btn-shine flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-medium">
+        <button disabled={busy || !password || limit.wait > 0} className="btn btn-primary btn-shine flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-medium">
           {busy && <Loader2 className="size-4 animate-spin" />} Entrar
         </button>
-        <button type="button" onClick={forgot} className="mx-auto block text-sm text-muted-foreground hover:text-rose">Esqueci a senha</button>
       </form>
     </Center>
   );
