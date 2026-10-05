@@ -236,7 +236,7 @@ function Body({ p, list, inBag, onAdd, onOpen, onClose }: {
               })}
             </div>
             <p className="mt-2 h-5 text-xs text-rose" aria-live="polite">
-              {soldOut ? "Esgotado no momento." : size && p.stock[size] <= 2 ? `Últimas ${p.stock[size]} no tamanho ${size}.` : ""}
+              {soldOut ? "Esgotado no momento." : size && p.stock[size] <= 2 ? (p.stock[size] === 1 ? `Última peça no tamanho ${size}.` : `Últimas ${p.stock[size]} no tamanho ${size}.`) : ""}
             </p>
           </div>
 

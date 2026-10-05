@@ -3,8 +3,8 @@
 // Vitrine: escolhe as fotos que passam no destaque da página inicial e a foto menor da colagem.
 // Cada foto aponta para uma peça (o cartão do destaque abre a peça); dá para enviar foto nova na hora.
 import { useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, ArrowRight, ExternalLink, ImagePlus, Loader2, RefreshCw, Search, Trash2, Upload } from "lucide-react";
+import { AnimatePresence, motion, useDragControls } from "motion/react";
+import { ArrowLeft, ArrowRight, ExternalLink, GripVertical, ImagePlus, Loader2, RefreshCw, Search, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { BASE, MAX_HERO_SLIDES, brl, focusPos, heroOf, imageSrc, photosOf, type HeroConfig, type HeroSlide, type Product } from "../../products";
 import { addProductPhoto, setHero } from "../admin-logic";
@@ -26,11 +26,14 @@ export default function Showcase() {
   const byId = (id: string) => products.find((p) => p.id === id);
 
   const save = (next: HeroConfig, msg: string) => run((s) => setHero(s, next), msg);
-  const move = (i: number, d: number) => {
+  // Leva a foto da posição "from" para "to" (setas ou arrastar).
+  const move = (from: number, to: number) => {
+    if (from === to || to < 0 || to >= hero.slides.length) return;
     const slides = [...hero.slides];
-    [slides[i], slides[i + d]] = [slides[i + d], slides[i]];
+    slides.splice(to, 0, ...slides.splice(from, 1));
     save({ ...hero, slides }, "Vitrine: ordem das fotos alterada");
   };
+  const [over, setOver] = useState<number | null>(null);
   const remove = (i: number) => save({ ...hero, slides: hero.slides.filter((_, k) => k !== i) }, "Vitrine: foto removida do destaque");
 
   // Aplica a foto escolhida no lugar certo (nova, troca ou foto menor).
@@ -54,34 +57,25 @@ export default function Showcase() {
       />
 
       <Card title="Fotos que passam no destaque" action={<span className="text-xs tabular-nums text-muted-foreground">{hero.slides.length} de {MAX_HERO_SLIDES}</span>}>
-        <p className="-mt-2 mb-4 text-sm text-muted-foreground">Elas se alternam a cada 5 segundos, nesta ordem. O cartão em cima da foto mostra o nome e o preço da peça.</p>
+        <p className="-mt-2 mb-4 text-sm text-muted-foreground">Elas se alternam a cada 5 segundos, nesta ordem. Arraste uma foto para outra posição (no celular, segure o <GripVertical className="inline size-3.5 align-[-2px]" strokeWidth={1.75} />).</p>
         <motion.ul layout className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           <AnimatePresence initial={false}>
             {hero.slides.map((s, i) => {
-              const p = byId(s.productId);
+              // Chave estável (sem o índice) para a foto deslizar até a nova posição.
+              const nth = hero.slides.slice(0, i).filter((x) => x.productId === s.productId && x.image === s.image).length;
               return (
-                <motion.li
-                  layout
-                  key={`${s.productId}-${s.image}-${i}`}
-                  initial={{ opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.2 } }}
-                  transition={{ duration: 0.45, ease }}
-                  className="box p-2"
-                >
-                  <div className="relative">
-                    <img src={imageSrc(s.image)} alt={p?.name ?? ""} style={{ objectPosition: posFor(p, s.image) }} className="aspect-[3/4] w-full rounded-xl object-cover" />
-                    <span className="glass absolute left-2 top-2 grid size-7 place-items-center rounded-full text-xs font-semibold tabular-nums">{i + 1}</span>
-                  </div>
-                  <p className="mt-2 truncate px-1 text-sm font-medium">{p?.name ?? "Peça removida"}</p>
-                  <p className="px-1 text-xs tabular-nums text-muted-foreground">{p ? brl(p.price) : ""}</p>
-                  <div className="mt-2 grid grid-cols-4 gap-1">
-                    <button onClick={() => move(i, -1)} disabled={i === 0} aria-label="Mover para antes" className="btn btn-fill grid h-9 place-items-center rounded-full"><ArrowLeft className="size-4" strokeWidth={1.5} /></button>
-                    <button onClick={() => move(i, 1)} disabled={i === hero.slides.length - 1} aria-label="Mover para depois" className="btn btn-fill grid h-9 place-items-center rounded-full"><ArrowRight className="size-4" strokeWidth={1.5} /></button>
-                    <button onClick={() => setTarget({ kind: "replace", index: i })} aria-label="Trocar foto" title="Trocar foto" className="btn btn-fill grid h-9 place-items-center rounded-full"><RefreshCw className="size-4" strokeWidth={1.5} /></button>
-                    <button onClick={() => remove(i)} disabled={hero.slides.length === 1} aria-label="Remover do destaque" title="Remover" className="btn btn-fill grid h-9 place-items-center rounded-full"><Trash2 className="size-4" strokeWidth={1.5} /></button>
-                  </div>
-                </motion.li>
+                <SlideCard
+                  key={`${s.productId}|${s.image}|${nth}`}
+                  slide={s}
+                  index={i}
+                  count={hero.slides.length}
+                  product={byId(s.productId)}
+                  highlighted={over === i}
+                  onOver={setOver}
+                  onMove={move}
+                  onReplace={() => setTarget({ kind: "replace", index: i })}
+                  onRemove={() => remove(i)}
+                />
               );
             })}
           </AnimatePresence>
@@ -235,5 +229,67 @@ function PhotoPicker({ title, visible, onClose, onPick }: {
         {!list.length && <li className="py-8 text-center text-sm text-muted-foreground">Nenhuma peça encontrada.</li>}
       </ul>
     </Drawer>
+  );
+}
+
+// Cartão da vitrine. Arrasta com o mouse por qualquer ponto; no toque, pela alça (para não travar a rolagem).
+function SlideCard({ slide, index, count, product: p, highlighted, onOver, onMove, onReplace, onRemove }: {
+  slide: HeroSlide; index: number; count: number; product: Product | undefined; highlighted: boolean;
+  onOver: (i: number | null) => void; onMove: (from: number, to: number) => void; onReplace: () => void; onRemove: () => void;
+}) {
+  const controls = useDragControls();
+  const [dragging, setDragging] = useState(false);
+  // Posição sob o ponteiro: o cartão com data-slot logo abaixo dele.
+  const slotAt = (x: number, y: number) => {
+    const el = document.elementsFromPoint(x - scrollX, y - scrollY).find((e) => e instanceof HTMLElement && e.dataset.slot && Number(e.dataset.slot) !== index);
+    return el ? Number((el as HTMLElement).dataset.slot) : null;
+  };
+  return (
+    <motion.li
+      layout
+      data-slot={index}
+      drag
+      dragControls={controls}
+      dragListener={false}
+      dragSnapToOrigin
+      dragElastic={0.15}
+      onPointerDown={(e) => { if (e.pointerType === "mouse" && !(e.target as HTMLElement).closest("button")) controls.start(e); }}
+      onDragStart={() => setDragging(true)}
+      onDrag={(_, info) => onOver(slotAt(info.point.x, info.point.y))}
+      onDragEnd={(_, info) => {
+        setDragging(false);
+        onOver(null);
+        const to = slotAt(info.point.x, info.point.y);
+        if (to !== null) onMove(index, to);
+      }}
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: dragging ? 1.04 : 1, boxShadow: dragging ? "0 24px 48px -16px rgba(122,46,99,0.35)" : "0 0 0 0 rgba(0,0,0,0)" }}
+      exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.2 } }}
+      transition={{ duration: 0.45, ease }}
+      style={{ zIndex: dragging ? 20 : 0 }}
+      className={`box relative p-2 transition-[outline-color] duration-200 md:cursor-grab ${dragging ? "md:cursor-grabbing" : ""} ${highlighted ? "outline-2 outline-offset-2 outline-rose" : "outline-2 outline-offset-2 outline-transparent"}`}
+    >
+      <div className="relative">
+        <img src={imageSrc(slide.image)} alt={p?.name ?? ""} draggable={false} style={{ objectPosition: posFor(p, slide.image) }} className="pointer-events-none aspect-[3/4] w-full select-none rounded-xl object-cover" />
+        <span className="glass absolute left-2 top-2 grid size-7 place-items-center rounded-full text-xs font-semibold tabular-nums">{index + 1}</span>
+        <button
+          type="button"
+          onPointerDown={(e) => controls.start(e)}
+          aria-label="Arrastar para mudar a posição"
+          title="Arrastar"
+          className="glass absolute right-2 top-2 grid size-9 touch-none cursor-grab place-items-center rounded-full active:cursor-grabbing"
+        >
+          <GripVertical className="size-4" strokeWidth={1.75} />
+        </button>
+      </div>
+      <p className="mt-2 truncate px-1 text-sm font-medium">{p?.name ?? "Peça removida"}</p>
+      <p className="px-1 text-xs tabular-nums text-muted-foreground">{p ? brl(p.price) : ""}</p>
+      <div className="mt-2 grid grid-cols-4 gap-1">
+        <button onClick={() => onMove(index, index - 1)} disabled={index === 0} aria-label="Mover para antes" className="btn btn-fill grid h-9 place-items-center rounded-full"><ArrowLeft className="size-4" strokeWidth={1.5} /></button>
+        <button onClick={() => onMove(index, index + 1)} disabled={index === count - 1} aria-label="Mover para depois" className="btn btn-fill grid h-9 place-items-center rounded-full"><ArrowRight className="size-4" strokeWidth={1.5} /></button>
+        <button onClick={onReplace} aria-label="Trocar foto" title="Trocar foto" className="btn btn-fill grid h-9 place-items-center rounded-full"><RefreshCw className="size-4" strokeWidth={1.5} /></button>
+        <button onClick={onRemove} disabled={count === 1} aria-label="Remover do destaque" title="Remover" className="btn btn-fill grid h-9 place-items-center rounded-full"><Trash2 className="size-4" strokeWidth={1.5} /></button>
+      </div>
+    </motion.li>
   );
 }

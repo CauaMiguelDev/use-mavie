@@ -23,6 +23,9 @@ const sections = [
   { id: "trocas", label: "Trocas" },
 ];
 
+// Rolagem suave da página (Lenis), usada pela paginação do catálogo para voltar ao topo da lista.
+let smooth: Lenis | null = null;
+
 export default function Store() {
   // Estoque e preços ao vivo (Supabase); cai para o catálogo estático se o banco não responder.
   const cat = useLiveCatalog();
@@ -35,7 +38,8 @@ export default function Store() {
   useEffect(() => {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const lenis = new Lenis({ autoRaf: true, lerp: 0.09, anchors: { offset: -96 } });
-    return () => lenis.destroy();
+    smooth = lenis;
+    return () => { smooth = null; lenis.destroy(); };
   }, []);
 
   useEffect(() => {
@@ -703,6 +707,8 @@ function Marquee() {
 }
 
 // ---------- Catálogo ----------
+const PAGE_SIZE = 12;
+
 function Catalog({ items, categories: allCategories, onAdd, onOpen }: { items: Product[]; categories: string[]; onAdd: (id: string, size: string) => boolean; onOpen: (id: string) => void }) {
   const [filter, setFilter] = useState<string>("Todas");
   const categories = allCategories.filter((c) => items.some((p) => p.category === c));
@@ -717,7 +723,30 @@ function Catalog({ items, categories: allCategories, onAdd, onOpen }: { items: P
     timer.current = setTimeout(() => setAdded(null), 1400);
   }
   const reduce = useReducedMotion();
-  const list = filter === "Todas" ? items : items.filter((p) => p.category === filter);
+  // Ordem aleatória a cada visita. Sorteia só depois de montar (o HTML estático vem na ordem do catálogo)
+  // e guarda o sorteio por peça, para a ordem não mudar enquanto a cliente navega.
+  const rank = useRef(new Map<string, number>());
+  const [shuffled, setShuffled] = useState(false);
+  useEffect(() => setShuffled(true), []);
+  const rankOf = (id: string) => {
+    if (!rank.current.has(id)) rank.current.set(id, Math.random());
+    return rank.current.get(id)!;
+  };
+  const ordered = shuffled ? [...items].sort((a, b) => rankOf(a.id) - rankOf(b.id)) : items;
+  const list = filter === "Todas" ? ordered : ordered.filter((p) => p.category === filter);
+  // Páginas de 12 (cabe certinho em 2, 3 ou 4 colunas).
+  const [page, setPage] = useState(0);
+  const pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  const current = Math.min(page, pages - 1);
+  const shown = list.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE);
+  function goTo(n: number) {
+    setPage(n);
+    const top = document.getElementById("catalogo");
+    if (!top) return;
+    const y = top.getBoundingClientRect().top + scrollY - 96;
+    if (smooth) smooth.scrollTo(y, { duration: 1 });
+    else scrollTo({ top: y, behavior: "smooth" });
+  }
 
   return (
     <section id="catalogo" className="mx-auto max-w-7xl px-4 py-24 md:px-8 md:py-32">
@@ -731,7 +760,7 @@ function Catalog({ items, categories: allCategories, onAdd, onOpen }: { items: P
         {["Todas", ...categories].map((c) => (
           <button
             key={c}
-            onClick={() => setFilter(c)}
+            onClick={() => { setFilter(c); setPage(0); }}
             className={`btn relative shrink-0 rounded-full px-5 py-2.5 text-sm ${filter === c ? "text-white" : "text-muted-foreground hover:text-foreground"}`}
           >
             {filter === c && <motion.span layoutId="filter-pill" className="bg-grad absolute inset-0 -z-10 rounded-full" transition={{ type: "spring", duration: 0.55, bounce: 0.15 }} />}
@@ -744,12 +773,12 @@ function Catalog({ items, categories: allCategories, onAdd, onOpen }: { items: P
         <div className="box mt-10 grid place-items-center px-6 py-20 text-center">
           <Shirt className="size-8 text-rose" strokeWidth={1.2} />
           <p className="mt-4 font-display text-3xl">Nenhuma peça nesta categoria agora</p>
-          <button onClick={() => setFilter("Todas")} className="btn btn-dark mt-6 rounded-full px-6 py-3 text-sm">Ver todas</button>
+          <button onClick={() => { setFilter("Todas"); setPage(0); }} className="btn btn-dark mt-6 rounded-full px-6 py-3 text-sm">Ver todas</button>
         </div>
       ) : (
         <motion.div layout={!reduce} className="mt-10 grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4">
           <AnimatePresence mode="popLayout">
-            {list.map((p, i) => {
+            {shown.map((p, i) => {
               const stock = totalStock(p);
               const soldOut = stock === 0;
               return (
@@ -795,7 +824,7 @@ function Catalog({ items, categories: allCategories, onAdd, onOpen }: { items: P
                   </div>
                   <div className="mt-1 flex items-center justify-between gap-2">
                     <p className={`text-xs ${soldOut || stock <= 2 ? "font-medium text-rose" : "text-muted-foreground"}`}>
-                      {soldOut ? "Esgotado" : stock <= 2 ? `Últimas ${stock === 1 ? "unidade" : "unidades"}` : p.category}
+                      {soldOut ? "Esgotado" : stock <= 2 ? (stock === 1 ? "Última unidade" : "Últimas unidades") : p.category}
                     </p>
                     {colorsOf(p, items).length > 1 && (
                       <span className="flex items-center gap-1" aria-label={`${colorsOf(p, items).length} cores`}>
@@ -840,6 +869,29 @@ function Catalog({ items, categories: allCategories, onAdd, onOpen }: { items: P
             })}
           </AnimatePresence>
         </motion.div>
+      )}
+
+      {pages > 1 && (
+        <nav aria-label="Páginas do catálogo" className="mt-16 flex items-center justify-center gap-2">
+          <button onClick={() => goTo(current - 1)} disabled={current === 0} aria-label="Página anterior" className="btn btn-fill grid size-11 place-items-center rounded-full disabled:opacity-40">
+            <ArrowRight className="size-4 rotate-180" strokeWidth={1.5} />
+          </button>
+          {Array.from({ length: pages }, (_, n) => (
+            <button
+              key={n}
+              onClick={() => goTo(n)}
+              aria-label={`Página ${n + 1}`}
+              aria-current={n === current ? "page" : undefined}
+              className={`btn relative grid size-11 place-items-center rounded-full text-sm tabular-nums ${n === current ? "text-white" : "btn-fill"}`}
+            >
+              {n === current && <motion.span layoutId="page-pill" className="bg-grad absolute inset-0 -z-10 rounded-full" transition={{ type: "spring", duration: 0.5, bounce: 0.15 }} />}
+              {n + 1}
+            </button>
+          ))}
+          <button onClick={() => goTo(current + 1)} disabled={current === pages - 1} aria-label="Próxima página" className="btn btn-fill grid size-11 place-items-center rounded-full disabled:opacity-40">
+            <ArrowRight className="size-4" strokeWidth={1.5} />
+          </button>
+        </nav>
       )}
     </section>
   );
