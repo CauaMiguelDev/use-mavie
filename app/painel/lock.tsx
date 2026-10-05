@@ -1,14 +1,15 @@
 "use client";
 
-// Senha do painel no modo local. Os dados ficam só neste aparelho; a senha impede que outra pessoa
-// que use o mesmo navegador abra o painel. Limite de tentativas com bloqueio progressivo.
+// Senha do painel no modo local. A senha é fixa (definida pela loja) e só o hash fica no código.
+// Limite de tentativas com bloqueio progressivo.
 import { useEffect, useState, type ReactNode } from "react";
 import { Eye, EyeOff, Loader2, LockKeyhole } from "lucide-react";
 import { attemptsLeft, formatWait, freshLock, hashPassword, lockedFor, registerFail, registerSuccess, type LockState } from "./lock-logic";
 import { Field, inputCls } from "./ui";
 import { Logo } from "../logo";
 
-const PASS_KEY = "mavie-lock";
+// PBKDF2 da senha do painel. Para trocar: gere com hashPassword (lock-logic.ts) e cole aqui.
+const PASSWORD = { salt: "0uK+AEt90j5fncX4cLd5Qw==", hash: "jEaGRzFZXV/k6MAT5a2YQSx9DghQm2/FviMMCsegcsE=" };
 const STATE_KEY = "mavie-lock-state";
 const SESSION_KEY = "mavie-unlocked";
 
@@ -51,11 +52,8 @@ export function useAttemptLimit(key = STATE_KEY) {
 }
 
 export function PasswordGate({ children }: { children: ReactNode }) {
-  const [mode, setMode] = useState<"loading" | "create" | "unlock" | "open">("loading");
-  useEffect(() => {
-    if (read(sessionStorage, SESSION_KEY, false)) setMode("open");
-    else setMode(read<{ hash?: string } | null>(localStorage, PASS_KEY, null)?.hash ? "unlock" : "create");
-  }, []);
+  const [mode, setMode] = useState<"loading" | "unlock" | "open">("loading");
+  useEffect(() => setMode(read(sessionStorage, SESSION_KEY, false) ? "open" : "unlock"), []);
 
   if (mode === "open") return <>{children}</>;
   if (mode === "loading") return null;
@@ -63,7 +61,7 @@ export function PasswordGate({ children }: { children: ReactNode }) {
     <div className="relative grid min-h-[100dvh] place-items-center px-4">
       <div aria-hidden className="bg-grad-soft pointer-events-none absolute inset-0" />
       <div className="relative w-full max-w-sm">
-        {mode === "create" ? <Create onDone={() => setMode("open")} /> : <Unlock onDone={() => setMode("open")} />}
+        <Unlock onDone={() => setMode("open")} />
       </div>
     </div>
   );
@@ -102,36 +100,6 @@ function PasswordInput({ id, value, onChange, invalid, autoComplete, disabled }:
   );
 }
 
-function Create({ onDone }: { onDone: () => void }) {
-  const [a, setA] = useState("");
-  const [b, setB] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (a.length < 6) return setError("Use pelo menos 6 caracteres.");
-    if (a !== b) return setError("As senhas não são iguais.");
-    setBusy(true);
-    write(localStorage, PASS_KEY, await hashPassword(a));
-    write(sessionStorage, SESSION_KEY, true);
-    onDone();
-  }
-  return (
-    <form onSubmit={submit} className="box space-y-5 p-6" noValidate>
-      <Header text="Crie a senha do painel. Ela será pedida sempre que o navegador for aberto." />
-      <Field label="Nova senha" htmlFor="pw-new" help="Pelo menos 6 caracteres. Anote em lugar seguro.">
-        <PasswordInput id="pw-new" value={a} onChange={setA} autoComplete="new-password" />
-      </Field>
-      <Field label="Repita a senha" htmlFor="pw-repeat" error={error}>
-        <PasswordInput id="pw-repeat" value={b} onChange={setB} invalid={!!error} autoComplete="new-password" />
-      </Field>
-      <button disabled={busy} className="btn btn-primary btn-shine flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-medium">
-        {busy && <Loader2 className="size-4 animate-spin" />} Criar senha e entrar
-      </button>
-    </form>
-  );
-}
-
 function Unlock({ onDone }: { onDone: () => void }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -142,8 +110,7 @@ function Unlock({ onDone }: { onDone: () => void }) {
     e.preventDefault();
     if (limit.wait || !password) return;
     setBusy(true);
-    const saved = read<{ salt: string; hash: string } | null>(localStorage, PASS_KEY, null);
-    const ok = saved && (await hashPassword(password, saved.salt)).hash === saved.hash;
+    const ok = (await hashPassword(password, PASSWORD.salt)).hash === PASSWORD.hash;
     setBusy(false);
     if (ok) {
       limit.success();
@@ -154,19 +121,6 @@ function Unlock({ onDone }: { onDone: () => void }) {
       setPassword("");
       setError(limit.left - 1 > 0 ? `Senha incorreta. Restam ${limit.left - 1} ${limit.left - 1 === 1 ? "tentativa" : "tentativas"}.` : "Senha incorreta.");
     }
-  }
-
-  function reset() {
-    const ok = confirm(
-      "Sem a senha não dá para abrir este painel.\n\nPara criar outra senha, TODOS os dados do painel neste navegador (produtos, pedidos, histórico) serão apagados. Se você tem um backup, poderá restaurar depois.\n\nApagar e começar de novo?",
-    );
-    if (!ok) return;
-    try {
-      localStorage.removeItem(PASS_KEY);
-      localStorage.removeItem(STATE_KEY);
-      indexedDB.deleteDatabase("mavie-admin");
-    } catch {}
-    location.reload();
   }
 
   return (
@@ -184,7 +138,6 @@ function Unlock({ onDone }: { onDone: () => void }) {
       <button disabled={busy || limit.wait > 0 || !password} className="btn btn-primary btn-shine flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-medium">
         {busy && <Loader2 className="size-4 animate-spin" />} Entrar
       </button>
-      <button type="button" onClick={reset} className="mx-auto block text-xs text-muted-foreground hover:text-rose">Esqueci a senha</button>
     </form>
   );
 }

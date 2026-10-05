@@ -28,7 +28,7 @@ A loja e o painel usam o mesmo banco (Supabase). Quando um pedido é registrado 
 
 - Painel: https://cauamigueldev.github.io/use-mavie/painel (login com e-mail e senha)
 - Seções: Visão geral, Pedidos, Pagamentos, Vendas, Produtos (com foto por arrastar e soltar), Estoque por tamanho e Categorias.
-- Acesso: o link fica discreto no rodapé (cadeado). Enquanto o Supabase não está conectado, o painel funciona no modo local: a senha é criada no primeiro acesso de cada aparelho, guardada só como hash, e após 5 erros o painel trava por 5 minutos (cada novo bloqueio dobra o tempo). Com o Supabase, o acesso é por e-mail e senha, com o mesmo limite de tentativas.
+- Acesso: o link fica discreto no rodapé (cadeado). Enquanto o Supabase não está conectado, o painel funciona no modo local: a senha já vem definida pela loja (só o hash fica no código, em `app/painel/lock.tsx`), e após 5 erros o painel trava por 5 minutos (cada novo bloqueio dobra o tempo). Com o Supabase, o acesso é por e-mail e senha, com o mesmo limite de tentativas.
 
 ### Configuração (uma vez)
 
