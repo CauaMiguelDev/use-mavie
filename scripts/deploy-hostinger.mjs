@@ -53,6 +53,8 @@ rmSync(join(out, ".vite"), { recursive: true, force: true });
 writeFileSync(join(out, ".htaccess"), htaccess); // Hostinger/Apache
 // Netlify/Cloudflare usam _redirects (o .htaccess é ignorado lá, e vice-versa): /painel abre o painel.
 writeFileSync(join(out, "_redirects"), "/painel  /painel.html  200\n");
+// netlify.toml: manda a Netlify SÓ servir os arquivos prontos (sem tentar compilar como Next.js).
+writeFileSync(join(out, "netlify.toml"), '[build]\n  publish = "."\n  command = "echo site ja compilado"\n');
 
 const git = `git -c user.name=deploy -c user.email=deploy@users.noreply.github.com`;
 run("git init -q -b hostinger", { cwd: out });
