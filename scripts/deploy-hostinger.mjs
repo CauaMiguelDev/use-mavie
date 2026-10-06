@@ -50,7 +50,9 @@ try {
 // Sem assetPrefix, o build já sai com /_next na raiz (confirmação de sanidade).
 if (!existsSync(join(out, "_next"))) throw new Error(`Build sem ${out}/_next; o NEXT_PUBLIC_BASE_PATH deveria estar vazio.`);
 rmSync(join(out, ".vite"), { recursive: true, force: true });
-writeFileSync(join(out, ".htaccess"), htaccess);
+writeFileSync(join(out, ".htaccess"), htaccess); // Hostinger/Apache
+// Netlify/Cloudflare usam _redirects (o .htaccess é ignorado lá, e vice-versa): /painel abre o painel.
+writeFileSync(join(out, "_redirects"), "/painel  /painel.html  200\n");
 
 const git = `git -c user.name=deploy -c user.email=deploy@users.noreply.github.com`;
 run("git init -q -b hostinger", { cwd: out });
